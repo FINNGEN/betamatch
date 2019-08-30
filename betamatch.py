@@ -45,6 +45,8 @@ def pytabix(tb,chrom,start,end):
 def match_beta(ext_path, fg_summary, info):
     """
     Match beta for external summary variants and our variants
+    In: ext fpath, fg fpath, column tuple
+    Out: df containing the results. DOES NOT SAVE FILES
     """
     unified_prefix="unif_"
     
@@ -83,18 +85,14 @@ def match_beta(ext_path, fg_summary, info):
     summary_data[unif_beta]=summary_data[info[4]]
     ext_data[unif_beta]=ext_data[info[4]]
 
-    for _,row in summary_data.iterrows():
-        if list( row[[unif_ref,unif_alt]] )!=sorted( row[[unif_ref,unif_alt]] ):
-            summary_data.loc[_,unif_beta]= -1*summary_data.loc[_,unif_beta]
-            tmp=summary_data.loc[_,unif_ref]
-            summary_data.loc[_,unif_ref]=summary_data.loc[_,unif_alt]
-            summary_data.loc[_,unif_alt]=tmp
-    for _,row in ext_data.iterrows():
-        if list( row[[unif_ref,unif_alt]] )!=sorted( row[[unif_ref,unif_alt]] ):
-            ext_data.loc[_,unif_beta]= -1*ext_data.loc[_,unif_beta]
-            tmp=ext_data.loc[_,unif_ref]
-            ext_data.loc[_,unif_ref]=ext_data.loc[_,unif_alt]
-            ext_data.loc[_,unif_alt]=tmp
+    summary_data["sort_dir"] = summary_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x) ) != list(x)) else 1,axis=1)
+    summary_data[[unif_ref,unif_alt]]=summary_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
+    summary_data[unif_beta]=summary_data["sort_dir"]*summary_data[unif_beta]
+    summary_data=summary_data.drop(labels="sort_dir",axis="columns")
+    ext_data["sort_dir"] = ext_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x)) != list(x)) else 1,axis=1)
+    ext_data[[unif_ref,unif_alt]]=ext_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
+    ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
+    ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
     joined_data=pd.merge(ext_data, summary_data,how="left",on=[info[0],info[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
@@ -103,26 +101,40 @@ def match_beta(ext_path, fg_summary, info):
      "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
      "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
     joined_data=joined_data[field_order]
-    joined_data.to_csv("{}.matched_betas.csv".format(os.path.basename(ext_path).split(".")[0]),index=False,sep="\t",na_rep="-"  )
     return joined_data
 
-def main(args):
-    #glob file lists from folders
-    ext_files=glob.glob("{}/*.csv".format(args.folder) ) 
-    filenames = [os.path.basename(p).split(".")[0] for p in ext_files]
-    print(filenames)
-    for f in ext_files:
-        pheno=os.path.basename(f).split(".")[0]
-        print(pheno)
-        pheno_path="{}{}.gz".format(args.summaryfolder,pheno)
-        out=match_beta(f,pheno_path,args.info)
-        #write result to file
+def main(ext_folder,fg_folder,info,match_file):
+    """
+    Match betas between external summ stats and FG summ stats
+    In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
+    Out:  
+    """
+    ext_folder=ext_folder.rstrip("/")
+    fg_folder=fg_folder.rstrip("/")
+    match_df=pd.read_csv(match_file,sep="\t")
+    output_list=[]
+    for _,row in match_df.iterrows():
+        ext_name = row["EXT"]
+        fg_name = row["FG"]
+        #check existance
+        ext_path="{}/{}".format(ext_folder,ext_name)
+        fg_path="{}/{}.gz".format(fg_folder,fg_name)
+        output_fname="{}x{}.betas.csv".format(ext_name.split(".")[0],fg_name)
+        if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
+            matched_betas=match_beta(ext_path,fg_path,info)
+            matched_betas.to_csv(path_or_buf=output_fname,index=False,sep="\t",na_rep="-")
+            output_list.append(output_fname)
+        else:
+            print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
+    print("The following files were created:")
+    [print(s) for s in output_list]
 
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
-    parser.add_argument("--folder",type=str,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
-    parser.add_argument("--summaryfolder",type=str,help="Finngen summary statistic folder")
-    parser.add_argument("--info",nargs=6,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
+    parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
+    parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     args=parser.parse_args()
-    main(args)
+    main(args.folder,args.summaryfolder,args.info,args.match_file)
