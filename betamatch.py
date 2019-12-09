@@ -75,7 +75,7 @@ def match_beta(ext_path, fg_summary, info):
         tmp_lst=tmp_lst+list(pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] ) )
     header=get_gzip_header(fg_summary)
     summary_data=pd.DataFrame(tmp_lst,columns=header,dtype='object')
-    ext_data[info[4]]=pd.to_numeric(ext_data[info[4]])
+    ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
     summary_data[info[4]]=pd.to_numeric(summary_data[info[4]])
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)

@@ -12,7 +12,10 @@ import math
 r = re.compile("x10",re.IGNORECASE)
 
 def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
-
+    #check for valid data
+    #i.e. more than 2 data points
+    if plot_data.shape[0]<3:
+        return 
     if pval_field is not None:
         ## recode unparsable floats
         if plot_data[pval_field].dtype!=np.float64:
@@ -32,7 +35,6 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
     else:
         plot_data=data[[fields[0],fields[1]]].astype("float64")
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
-
     plot_data=plot_data.dropna(axis="index")
 
     if exp_betas:
@@ -60,7 +62,6 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
         y=inter+slope*x
         linedata=pd.DataFrame({x_title:x, y_title:y})
         perf_corr=pd.DataFrame({x_title:x,y_title:x})
-
     #print(slope,inter,rval,pval,stderr)
     #print(corr)
     breaks=[-max_val,0,max_val]
@@ -110,4 +111,5 @@ if __name__=="__main__":
             plots.append(p)
         except Exception as e:
             print(f'An exception occurred while plotting {str(e)} \n{traceback.print_exc()}')
+    plots=[x for x in plots if x != None]
     save_as_pdf_pages(plots,filename=args.out)
