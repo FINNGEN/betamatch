@@ -4,6 +4,7 @@ import tabix
 import argparse
 import os,subprocess,glob,shlex,re
 from subprocess import Popen,PIPE
+from scipy.stats import pearsonr
 
 def flip_unified_strand(a1,a2):
     """
@@ -17,6 +18,13 @@ def flip_unified_strand(a1,a2):
         a2 = ''.join([allele_dict[elem.upper()] for elem in a2])
     return (a1,a2)
 
+def flip_to_positive_beta(a1,a2,beta):
+    """Flip alleles and beta if beta is negative.
+    """
+    if beta < 0:
+        return (a2,a1,-beta)
+    else:
+        return (a1,a2,beta)
 
 def get_gzip_header(fname):
     """"Returns header for gzipped tsvs, as that is not currently possible using pytabix
@@ -41,6 +49,16 @@ def pytabix(tb,chrom,start,end):
         return retval
     except tabix.TabixError:
         return []
+
+def calculate_r2(dataset,x_label,y_label):
+    data=dataset[[x_label,y_label]].copy()
+    data=data.dropna(how="any")
+    x_array = data[x_label].values
+    y_array = data[y_label].values
+    r,_=pearsonr(x_array,y_array)
+    r2=r**2
+    n=data.shape[0]
+    return (r2,n)
 
 def match_beta(ext_path, fg_summary, info):
     """
@@ -82,6 +100,8 @@ def match_beta(ext_path, fg_summary, info):
     summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     unif_beta="{}beta".format(unified_prefix)
+    #summary_data[[unif_ref,unif_alt,unif_beta]]=summary_data.loc[:,[ info[2], info[3], info[4] ]].apply(lambda x: flip_to_positive_beta(*x),axis=1,result_type="expand")
+    #ext_data[[unif_ref,unif_alt,unif_beta]]=ext_data.loc[:,[ info[2], info[3], info[4] ]].apply(lambda x: flip_to_positive_beta(*x),axis=1,result_type="expand")
     summary_data[unif_beta]=summary_data[info[4]]
     ext_data[unif_beta]=ext_data[info[4]]
 
@@ -113,6 +133,7 @@ def main(ext_folder,fg_folder,info,match_file):
     fg_folder=fg_folder.rstrip("/")
     match_df=pd.read_csv(match_file,sep="\t")
     output_list=[]
+    r2s=pd.DataFrame(columns=["phenotype","R^2","N"])
     for _,row in match_df.iterrows():
         ext_name = row["EXT"]
         fg_name = row["FG"]
@@ -122,10 +143,13 @@ def main(ext_folder,fg_folder,info,match_file):
         output_fname="{}x{}.betas.csv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
+            r2,n=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg")
+            r2s=r2s.append({"phenotype":matched_betas.loc[0,"trait"],"R^2":r2,"N":n},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
+    r2s.to_csv("r2_table.csv",sep="\t",index=False)
     print("The following files were created:")
     [print(s) for s in output_list]
 
