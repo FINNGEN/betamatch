@@ -18,13 +18,13 @@ def flip_unified_strand(a1,a2):
         a2 = ''.join([allele_dict[elem.upper()] for elem in a2])
     return (a1,a2)
 
-def flip_to_positive_beta(a1,a2,beta):
-    """Flip alleles and beta if beta is negative.
+def flip_beta(r1,a1,beta1,beta2):
+    """If beta1 <0, flip betas (and consequently alleles)
     """
-    if beta < 0:
-        return (a2,a1,-beta)
+    if beta1 < 0:
+        return (a1,r1,-beta1,-beta2)
     else:
-        return (a1,a2,beta)
+        return (r1,a1,beta1,beta2)
 
 def get_gzip_header(fname):
     """"Returns header for gzipped tsvs, as that is not currently possible using pytabix
@@ -100,8 +100,6 @@ def match_beta(ext_path, fg_summary, info):
     summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     unif_beta="{}beta".format(unified_prefix)
-    #summary_data[[unif_ref,unif_alt,unif_beta]]=summary_data.loc[:,[ info[2], info[3], info[4] ]].apply(lambda x: flip_to_positive_beta(*x),axis=1,result_type="expand")
-    #ext_data[[unif_ref,unif_alt,unif_beta]]=ext_data.loc[:,[ info[2], info[3], info[4] ]].apply(lambda x: flip_to_positive_beta(*x),axis=1,result_type="expand")
     summary_data[unif_beta]=summary_data[info[4]]
     ext_data[unif_beta]=ext_data[info[4]]
 
@@ -115,6 +113,12 @@ def match_beta(ext_path, fg_summary, info):
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
     joined_data=pd.merge(ext_data, summary_data,how="left",on=[info[0],info[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
+
+    unif_beta_ext="{}_ext".format(unif_beta)
+    unif_beta_fg="{}_fg".format(unif_beta)
+    joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]]=joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]].apply(
+        lambda x: flip_beta(*x),axis=1,result_type="expand")
+    
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
      "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
@@ -144,7 +148,7 @@ def main(ext_folder,fg_folder,info,match_file):
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
             r2,n=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg")
-            r2s=r2s.append({"phenotype":matched_betas.loc[0,"trait"],"R^2":r2,"N":n},ignore_index=True,sort=False)
+            r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"N":n},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
