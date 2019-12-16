@@ -36,7 +36,9 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
         plot_data=data[[fields[0],fields[1]]].astype("float64")
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
     plot_data=plot_data.dropna(axis="index")
-
+    if plot_data.shape[0]<2:
+        print("Too little data!")
+        return
     if exp_betas:
         # align to risk allele in 2nd....
         plot_data[[x_title, y_title]] =plot_data[[x_title, y_title]].apply( lambda x: -1*x if x[1]<0 else x, axis=1)
