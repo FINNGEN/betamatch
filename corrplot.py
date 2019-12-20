@@ -12,10 +12,6 @@ import math
 r = re.compile("x10",re.IGNORECASE)
 
 def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
-    #check for valid data
-    #i.e. more than 2 data points
-    if plot_data.shape[0]<3:
-        return 
     if pval_field is not None:
         ## recode unparsable floats
         if plot_data[pval_field].dtype!=np.float64:
@@ -36,6 +32,8 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
         plot_data=data[[fields[0],fields[1]]].astype("float64")
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
     plot_data=plot_data.dropna(axis="index")
+    #check for valid data
+    #i.e. more than 2 data points
     if plot_data.shape[0]<2:
         print("Too little data!")
         return
