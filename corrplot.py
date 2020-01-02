@@ -55,10 +55,13 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
     max_val_x=np.max( np.abs(list(plot_data[x_title]) ) )
     max_val_y=np.max( np.abs(list(plot_data[y_title]) ) )
     min_val_y=np.min(list(plot_data[y_title] ))
+    min_val_x=np.min(list(plot_data[x_title] ))
+    max_val = np.max([max_val_x,max_val_y])
+    min_val = np.min([min_val_x,min_val_y])
     
 
-    xlim=(-0.1*max_val_x,max_val_x)
-    ylim=(-np.abs(min_val_y),max_val_y)
+    xlim=(-np.abs(min_val),max_val)
+    ylim=(-np.abs(min_val),max_val)
 
     if exp_betas:
         xlim=(np.min(plot_data[x_title]),np.max(plot_data[x_title]))
