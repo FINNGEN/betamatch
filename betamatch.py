@@ -183,7 +183,7 @@ def main(ext_folder,fg_folder,info,match_file):
         #check existance
         ext_path="{}/{}".format(ext_folder,ext_name)
         fg_path="{}/{}.gz".format(fg_folder,fg_name)
-        output_fname="{}x{}.betas.csv".format(ext_name.split(".")[0],fg_name)
+        output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
             r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
@@ -192,7 +192,7 @@ def main(ext_folder,fg_folder,info,match_file):
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
-    r2s.to_csv("r2_table.csv",sep="\t",index=False,float_format="%.3f",na_rep="-")
+    r2s.to_csv("r2_table.tsv",sep="\t",index=False,float_format="%.3f",na_rep="-")
     print("The following files were created:")
     [print(s) for s in output_list]
 

@@ -118,7 +118,7 @@ if __name__=="__main__":
     parser.add_argument("--y-title",default="y-axis",help="title for y axis")
     parser.add_argument("--out",default="plots.pdf",help="output file name")
     args=parser.parse_args()
-    files=glob.glob("{}/*.csv".format(args.folder) )
+    files=glob.glob("{}/*.tsv".format(args.folder) )
     plots = []
     for f in files:
         out_fname=os.path.basename(f).split(".")[0] + args.out
