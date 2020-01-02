@@ -11,12 +11,12 @@ import math
 
 r = re.compile("x10",re.IGNORECASE)
 
-def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
+def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
     if pval_field is not None:
         ## recode unparsable floats
         if plot_data[pval_field].dtype!=np.float64:
             plot_data[pval_field]=plot_data[pval_field].str.replace(" ","").str.replace(u'×',"x").str.replace(r,"e").str.replace("−","-")
-        plot_data=plot_data[[fields[0],fields[1], pval_field]].astype("float64")
+        plot_data[[fields[0],fields[1], pval_field]]=plot_data[[fields[0],fields[1], pval_field]].astype("float64")
         #print(plot_data[pval_field])
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title, pval_field:"pval"})
 
@@ -29,11 +29,13 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
             print(f"filtering {p_threshold}")
             plot_data = plot_data[ plot_data.pval < p_threshold ]
     else:
-        plot_data=data[[fields[0],fields[1]]].astype("float64")
+        plot_data[[fields[0],fields[1]]]=data[[fields[0],fields[1]]].astype("float64")
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
+    plot_data[[se_fields[0],se_fields[1]]]=plot_data[[se_fields[0],se_fields[1] ]].astype("float64")
+    #data fields: fields[0],fields[1],se_fields[0],se_fields[1],pval_field
+    plot_data = plot_data[[x_title,y_title,se_fields[0],se_fields[1],"pval"]]
     plot_data=plot_data.dropna(axis="index")
-    #check for valid data
-    #i.e. more than 2 data points
+    #check for valid data, i.e. more than 2 data points
     if plot_data.shape[0]<2:
         print("Too little data!")
         return
@@ -50,10 +52,16 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
     linedata=pd.DataFrame({x_title:x, y_title:y})
     perf_corr=pd.DataFrame({x_title:x,y_title:x})
 
-    max_val=np.max( np.abs(list(plot_data[x_title])+list(plot_data[y_title]) ) )
+    max_val_x=np.max( np.abs(list(plot_data[x_title]) ) )
+    max_val_y=np.max( np.abs(list(plot_data[y_title]) ) )
+    min_val_y=np.min(list(plot_data[y_title] ))
+    min_val_x=np.min(list(plot_data[x_title] ))
+    max_val = np.max([max_val_x,max_val_y])
+    min_val = np.min([min_val_x,min_val_y])
+    
 
-    xlim=(-max_val,max_val)
-    ylim=(-max_val,max_val)
+    xlim=(-np.abs(min_val),max_val)
+    ylim=(-np.abs(min_val),max_val)
 
     if exp_betas:
         xlim=(np.min(plot_data[x_title]),np.max(plot_data[x_title]))
@@ -64,16 +72,27 @@ def main(plot_data, pheno, fields, x_title, y_title, output_name, pval_field=Non
         perf_corr=pd.DataFrame({x_title:x,y_title:x})
     #print(slope,inter,rval,pval,stderr)
     #print(corr)
-    breaks=[-max_val,0,max_val]
+
+    # add confidence interval
+    #approx 1.96 *SE when using z-scores (a reasonable assumption)
+    x_ci = 1.96*plot_data[se_fields[0]]
+    plot_data["ci_x_pos"] = plot_data[x_title]+x_ci
+    plot_data["ci_x_neg"] = plot_data[x_title]-x_ci
+    y_ci = 1.96*plot_data[se_fields[1]]
+    plot_data["ci_y_pos"] = plot_data[y_title]+y_ci
+    plot_data["ci_y_neg"] = plot_data[y_title]-y_ci
+
+
+    #breaks=[-max_val,0,max_val]
     plot=(ggplot(data=plot_data,mapping=aes(x=x_title,y=y_title))+
         geom_line(data=linedata,mapping=aes(x=x_title,y=y_title),color="#666666" )+
         geom_line(data=perf_corr,mapping=aes(x=x_title,y=y_title),linetype="dashed",color="#888888" )+
         geom_point(color="red",size=0.5)+
+        geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
+        geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
         annotate("text",label="R^2: {:.2f}".format(rval**2),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.85,size=20 )+
         coord_cartesian(xlim=xlim,ylim=ylim)+
         ggtitle(pheno)+
-        #scale_x_continuous(breaks=breaks, labels=["{:.2f}".format(-max_val),"0","{:.2f}".format(-max_val)])+
-        #scale_y_continuous(breaks=breaks, labels=["{:.2f}".format(-max_val),"0","{:.2f}".format(-max_val)])+
         #scale_x_continuous(limits=xlim)+
         #scale_y_continuous(limits=ylim)+
         theme_minimal()+
@@ -91,6 +110,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser("A utility for plotting correlations from tsv data")
     parser.add_argument("folder",help="data file folder")
     parser.add_argument("--fields",metavar=("field1","field2"),nargs=2,help="column names for the values to be plotted")
+    parser.add_argument("--se-fields",dest="se_fields",metavar=("field1","field2"),nargs=2,help="column names for the confidence interval bars to be plotted")
     parser.add_argument("--pval_field", default="pval_ext")
     parser.add_argument("--pval_threshold", type=float)
     parser.add_argument("--exp_values", action='store_true')
@@ -107,7 +127,7 @@ if __name__=="__main__":
             #extract columns
             pheno = os.path.basename(f).split(".")[0]
             print(f"plotting {f}")
-            p = main(plot_data, pheno,args.fields,args.x_title,args.y_title,out_fname, args.pval_field, args.pval_threshold, exp_betas=args.exp_values )
+            p = main(plot_data, pheno,args.fields,args.se_fields,args.x_title,args.y_title,out_fname, args.pval_field, args.pval_threshold, exp_betas=args.exp_values )
             plots.append(p)
         except Exception as e:
             print(f'An exception occurred while plotting {str(e)} \n{traceback.print_exc()}')
