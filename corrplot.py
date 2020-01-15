@@ -11,7 +11,7 @@ from betamatch import calculate_r2
 
 r = re.compile("x10",re.IGNORECASE)
 
-def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
+def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False,ambiguous_field=None):
     if pval_field is not None:
         ## recode unparsable floats
         if plot_data[pval_field].dtype!=np.float64:
@@ -33,7 +33,7 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
     plot_data[[se_fields[0],se_fields[1]]]=plot_data[[se_fields[0],se_fields[1] ]].astype("float64")
     #data fields: fields[0],fields[1],se_fields[0],se_fields[1],pval_field
-    plot_data = plot_data[[x_title,y_title,se_fields[0],se_fields[1],"pval"]]
+    plot_data = plot_data[[x_title,y_title,se_fields[0],se_fields[1],"pval",ambiguous_field]]
     plot_data=plot_data.dropna(axis="index")
     #check for valid data, i.e. more than 2 data points
     if plot_data.shape[0]<2:
@@ -92,7 +92,7 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         geom_line(data=linedata,mapping=aes(x=x_title,y=y_title),color="#666666" )+
         geom_line(data=linedata_weighted,mapping=aes(x=x_title,y=y_title),linetype="dashdot",color="#666666" )+
         geom_line(data=perf_corr,mapping=aes(x=x_title,y=y_title),linetype="dashed",color="#888888" )+
-        geom_point(color="red",size=0.5)+
+        geom_point(aes(shape=ambiguous_field,color=ambiguous_field),size=1)+
         geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
         geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
         annotate("text",label="R^2 (pearsonr): {:.2f}".format(r_2_normal),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
@@ -123,6 +123,7 @@ if __name__=="__main__":
     parser.add_argument("--x-title",default="x-axis",help="title for x axis")
     parser.add_argument("--y-title",default="y-axis",help="title for y axis")
     parser.add_argument("--out",default="plots.pdf",help="output file name")
+    parser.add_argument("--ambiguous-field", default="Ambiguous variant",help="ambiguous variant column")
     args=parser.parse_args()
     files=glob.glob("{}/*.tsv".format(args.folder) )
     plots = []
@@ -133,7 +134,17 @@ if __name__=="__main__":
             #extract columns
             pheno = os.path.basename(f).split(".")[0]
             print(f"plotting {f}")
-            p = main(plot_data, pheno,args.fields,args.se_fields,args.x_title,args.y_title,out_fname, args.pval_field, args.pval_threshold, exp_betas=args.exp_values )
+            p = main(plot_data,
+                    pheno=pheno,
+                    fields=args.fields,
+                    se_fields=args.se_fields,
+                    x_title=args.x_title,
+                    y_title=args.y_title,
+                    output_name=out_fname,
+                    pval_field=args.pval_field,
+                    p_threshold=args.pval_threshold,
+                    exp_betas=args.exp_values,
+                    ambiguous_field=args.ambiguous_field )
             plots.append(p)
         except Exception as e:
             print(f'An exception occurred while plotting {str(e)} \n{traceback.print_exc()}')

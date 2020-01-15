@@ -82,6 +82,16 @@ def weighted_cov(x,y,w):
 def weighted_pearsonr(x,y,w):
     return weighted_cov(x,y,w)/np.sqrt( weighted_cov(x,x,w)*weighted_cov(y,y,w) )
 
+def is_ambiguous(a1,a2):
+    if (type(a1)!=type("")) or (type(a2)!=type("")):
+        return None 
+    allele_dict={"A":"T","C":"G","T":"A","G":"C"}
+    compare_a1=a1.upper()
+    compare_a2 = ''.join([allele_dict[elem] for elem in a2.upper()])
+    if compare_a1 == compare_a2:
+        return True
+    else:
+        return False
 
 def match_beta(ext_path, fg_summary, info):
     """
@@ -159,10 +169,11 @@ def match_beta(ext_path, fg_summary, info):
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
+    joined_data["Ambiguous variant"]=joined_data[[unif_ref,unif_alt]].apply(lambda x: is_ambiguous(*x),axis=1)
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
      "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
      "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction","Ambiguous variant"]
     joined_data=joined_data[field_order]
     return joined_data
 
