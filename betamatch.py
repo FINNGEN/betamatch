@@ -46,7 +46,7 @@ def pytabix(tb,chrom,start,end):
     """
     try:
         retval=tb.querys("{}:{}-{}".format(chrom,start,end))
-        return retval
+        return list(retval)
     except tabix.TabixError:
         return []
 
@@ -129,7 +129,7 @@ def match_beta(ext_path, fg_summary, info):
         raise
     tmp_lst=[]
     for _,row in ext_data.iterrows():
-        tmp_lst=tmp_lst+list(pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] ) )
+        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] )
     header=get_gzip_header(fg_summary)
     summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
     ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
