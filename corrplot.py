@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 import pandas as pd,numpy as np
-import matplotlib.pyplot as plt
 from scipy import stats
 from plotnine import *
 import argparse,glob,os
@@ -8,6 +7,7 @@ import traceback
 import os
 import re
 import math
+from betamatch import calculate_r2
 
 r = re.compile("x10",re.IGNORECASE)
 
@@ -47,15 +47,19 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
 
 
     [slope,inter,rval,pval,stderr]=stats.linregress( plot_data[x_title], plot_data[y_title])
-    x=np.linspace(-100,100,num=plot_data.shape[0])
-    y=inter+slope*x
-    linedata=pd.DataFrame({x_title:x, y_title:y})
-    perf_corr=pd.DataFrame({x_title:x,y_title:x})
+    (r_2_normal,r_2_weighted,N_normal, N_weighted) = calculate_r2(plot_data,x_title,y_title,se_fields[0]) 
+    weighted_coeff = np.polynomial.polynomial.polyfit(plot_data[x_title],plot_data[y_title],1,w=1/(plot_data[se_fields[0]]**2+1e-9) )
+    x = np.linspace(-100,100,num=plot_data.shape[0])
+    y = inter+slope*x
+    w_y = weighted_coeff[0]+weighted_coeff[1]*x
+    linedata = pd.DataFrame({x_title:x, y_title:y})
+    linedata_weighted = pd.DataFrame({x_title:x, y_title:w_y})
+    perf_corr = pd.DataFrame({x_title:x,y_title:x})
 
-    max_val_x=np.max( np.abs(list(plot_data[x_title]) ) )
-    max_val_y=np.max( np.abs(list(plot_data[y_title]) ) )
-    min_val_y=np.min(list(plot_data[y_title] ))
-    min_val_x=np.min(list(plot_data[x_title] ))
+    max_val_x = np.max( np.abs(list(plot_data[x_title]) ) )
+    max_val_y = np.max( np.abs(list(plot_data[y_title]) ) )
+    min_val_y = np.min(list(plot_data[y_title] ))
+    min_val_x = np.min(list(plot_data[x_title] ))
     max_val = np.max([max_val_x,max_val_y])
     min_val = np.min([min_val_x,min_val_y])
     
@@ -86,11 +90,13 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
     #breaks=[-max_val,0,max_val]
     plot=(ggplot(data=plot_data,mapping=aes(x=x_title,y=y_title))+
         geom_line(data=linedata,mapping=aes(x=x_title,y=y_title),color="#666666" )+
+        geom_line(data=linedata_weighted,mapping=aes(x=x_title,y=y_title),linetype="dashdot",color="#666666" )+
         geom_line(data=perf_corr,mapping=aes(x=x_title,y=y_title),linetype="dashed",color="#888888" )+
         geom_point(color="red",size=0.5)+
         geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
         geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
-        annotate("text",label="R^2: {:.2f}".format(rval**2),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.85,size=20 )+
+        annotate("text",label="R^2 (pearsonr): {:.2f}".format(r_2_normal),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
+        annotate("text",label="R^2 (weighted): {:.2f}".format(r_2_weighted),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
         coord_cartesian(xlim=xlim,ylim=ylim)+
         ggtitle(pheno)+
         #scale_x_continuous(limits=xlim)+
