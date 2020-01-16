@@ -16,9 +16,9 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         ## recode unparsable floats
         if plot_data[pval_field].dtype!=np.float64:
             plot_data[pval_field]=plot_data[pval_field].str.replace(" ","").str.replace(u'×',"x").str.replace(r,"e").str.replace("−","-")
-        plot_data[[fields[0],fields[1], pval_field]]=plot_data[[fields[0],fields[1], pval_field]].astype("float64")
+        plot_data[pval_field]=plot_data[pval_field].astype("float64")
         #print(plot_data[pval_field])
-        plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title, pval_field:"pval"})
+        plot_data=plot_data.rename(columns={pval_field:"pval"})
 
         if all(np.isnan(plot_data["pval"])):
             ## some don't have p-value defined.... NAs dropped later so set to not filtering 1
@@ -28,13 +28,12 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         if p_threshold is not None:
             print(f"filtering {p_threshold}")
             plot_data = plot_data[ plot_data.pval < p_threshold ]
-    else:
-        plot_data[[fields[0],fields[1]]]=data[[fields[0],fields[1]]].astype("float64")
-        plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
-    plot_data[[se_fields[0],se_fields[1]]]=plot_data[[se_fields[0],se_fields[1] ]].astype("float64")
-    #data fields: fields[0],fields[1],se_fields[0],se_fields[1],pval_field
-    plot_data = plot_data[[x_title,y_title,se_fields[0],se_fields[1],"pval"]]
+    
+    #data fields: x_title,y_title,se_fields[0],se_fields[1]
+    plot_data=plot_data[[fields[0],fields[1],se_fields[0],se_fields[1] ]].astype("float64")
+    plot_data=plot_data.rename(columns={fields[0]:x_title,fields[1]:y_title})
     plot_data=plot_data.dropna(axis="index")
+    
     #check for valid data, i.e. more than 2 data points
     if plot_data.shape[0]<2:
         print("Too little data!")
