@@ -91,9 +91,9 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         geom_line(data=linedata,mapping=aes(x=x_title,y=y_title),color="#666666" )+
         geom_line(data=linedata_weighted,mapping=aes(x=x_title,y=y_title),linetype="dashdot",color="#666666" )+
         geom_line(data=perf_corr,mapping=aes(x=x_title,y=y_title),linetype="dashed",color="#888888" )+
-        geom_point(color="red",size=0.5)+
         geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
         geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
+        geom_point(color="red",size=0.5)+
         annotate("text",label="R^2 (pearsonr): {:.2f}".format(r_2_normal),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
         annotate("text",label="R^2 (weighted): {:.2f}".format(r_2_weighted),x=xlim[0]+(xlim[1]-xlim[0])*0.25,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
         coord_cartesian(xlim=xlim,ylim=ylim)+
