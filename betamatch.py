@@ -166,13 +166,13 @@ def match_beta(ext_path, fg_summary, info):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info,match_file):
+def main(info,match_file,out_f):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
     Out:  
     """
-    match_df=pd.read_csv(match_file,sep="\t")
+    match_df=pd.read_csv(match_file,sep="\t",header=None,names=["EXT","FG"])
     output_list=[]
     r2s=pd.DataFrame(columns=["phenotype","R^2","Weighted R^2 (1/ext var)","N (unweighted)","N (weighted)"],dtype=object)
     for _,row in match_df.iterrows():
@@ -186,7 +186,7 @@ def main(info,match_file):
             matched_betas=match_beta(ext_path,fg_path,info)
             r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
             r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
-            matched_betas.to_csv(path_or_buf=output_fname,index=False,sep="\t",na_rep="-")
+            matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
@@ -201,5 +201,6 @@ if __name__=="__main__":
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
     parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
+    parser.add_argument("--output-folder",required=True,help="Output folder")
     args=parser.parse_args()
-    main(args.info,args.match_file)
+    main(args.info,args.match_file,args.output_folder)
