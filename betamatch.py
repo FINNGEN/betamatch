@@ -166,23 +166,21 @@ def match_beta(ext_path, fg_summary, info):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(ext_folder,fg_folder,info,match_file):
+def main(info,match_file):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
     Out:  
     """
-    ext_folder=ext_folder.rstrip("/")
-    fg_folder=fg_folder.rstrip("/")
     match_df=pd.read_csv(match_file,sep="\t")
     output_list=[]
     r2s=pd.DataFrame(columns=["phenotype","R^2","Weighted R^2 (1/ext var)","N (unweighted)","N (weighted)"],dtype=object)
     for _,row in match_df.iterrows():
-        ext_name = row["EXT"]
-        fg_name = row["FG"]
+        ext_path = row["EXT"]
+        fg_path = row["FG"]
+        fg_name = os.path.splitext(os.path.basename(fg_path))[0]
+        ext_name = os.path.splitext(os.path.basename(ext_path))[0]
         #check existance
-        ext_path="{}/{}".format(ext_folder,ext_name)
-        fg_path="{}/{}.gz".format(fg_folder,fg_name)
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
@@ -199,9 +197,9 @@ def main(ext_folder,fg_folder,info,match_file):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
-    parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
-    parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
+    #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
+    #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
     parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     args=parser.parse_args()
-    main(args.folder,args.summaryfolder,args.info,args.match_file)
+    main(args.info,args.match_file)
