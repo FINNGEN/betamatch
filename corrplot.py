@@ -1,12 +1,9 @@
 #! /usr/bin/env python3
 import pandas as pd,numpy as np #type: ignore
-from scipy import stats
 from plotnine import *
 import argparse,glob,os
 import traceback
-import os
 import re
-import math
 from betamatch import calculate_r2
 from typing import List, Dict, Any, Optional
 
