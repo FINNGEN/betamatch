@@ -1,14 +1,14 @@
 task match_betas{
     Array[Array[String]] match_file
     Array[File] tbi_indexes
-    Array[String] ext_files = transpose(match_file)[0]
+    Array[File] ext_files = transpose(match_file)[0]
     Array[File] summary_stat_files = transpose(match_file)[1]
     Array[String] column_names=["\"#chrom\"","pos","ref","alt","beta","pval"]
     String docker
+    Int mem
     String out_f = "out_f"
     String? ext_repo_url
     Float pval_threshold
-    Int mem
 
     command <<<
         if (ext_repo_url) {
@@ -42,6 +42,7 @@ task match_betas{
 
 workflow betamatch{
     String docker
+    Int mem
     File match_file
     Array[Array[String]] files = read_tsv(match_file)
     String ext_repo_url
@@ -51,6 +52,6 @@ workflow betamatch{
         String t = sub(temp[s],".gz",".gz.tbi")
     }
     call match_betas {
-        input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url
+        input: match_file = files, docker=docker, mem = mem, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url
     }
 }
