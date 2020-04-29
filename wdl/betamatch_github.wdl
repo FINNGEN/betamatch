@@ -2,17 +2,21 @@ task match_betas{
     Array[Array[String]] match_file
     Array[File] tbi_indexes
     Array[String] ext_files = transpose(match_file)[0]
-    Array[File] summary_stat_files = transpose(match_file)[1] 
+    Array[File] summary_stat_files = transpose(match_file)[1]
     Array[String] column_names=["\"#chrom\"","pos","ref","alt","beta","pval"]
     String docker
     String out_f = "out_f"
-    String ext_repo_url
+    String? ext_repo_url
     Float pval_threshold
+    Int mem
+
     command <<<
-        #download github repo to ext_repo
-        git clone ${ext_repo_url} ext_repo
-        #add ext_repo/data/ to the beginning of ext_files
-        cat ${write_lines(ext_files)}|sed -e "s/^/ext_repo\/data\//g" > exts
+        if (ext_repo_url) {
+            #download github repo to ext_repo
+            git clone ${ext_repo_url} ext_repo
+            #add ext_repo/data/ to the beginning of ext_files
+            cat ${write_lines(ext_files)}|sed -e "s/^/ext_repo\/data\//g" > exts
+        }
         #combine the different files into one match file
         paste exts ${write_lines(summary_stat_files)} > matchfile
         mkdir ${out_f}
@@ -23,10 +27,10 @@ task match_betas{
     runtime {
         docker: "${docker}"
         cpu: "1"
-        memory: "3 GB"
+        memory: "${mem} GB"
         disks: "local-disk 50 HDD"
         zones: "europe-west1-b"
-        preemptible: 2 
+        preemptible: 2
     }
 
     output {
@@ -41,10 +45,10 @@ workflow betamatch{
     File match_file
     Array[Array[String]] files = read_tsv(match_file)
     String ext_repo_url
-    Array[File] temp = transpose(files)[1] 
+    Array[File] temp = transpose(files)[1]
     Float pval_threshold
     scatter (s in range( length( temp) ) ){#scatter magic, it just works
-        String t = sub(temp[s],".gz",".gz.tbi") 
+        String t = sub(temp[s],".gz",".gz.tbi")
     }
     call match_betas {
         input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url
