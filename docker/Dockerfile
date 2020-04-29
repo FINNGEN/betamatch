@@ -5,5 +5,6 @@ RUN apt-get update && apt-get install -qqy wget unzip bzip2 curl python3.6 pytho
     pip3 install pytabix numpy pandas plotnine
 COPY betamatch.py /usr/local/bin
 COPY corrplot.py /usr/local/bin
+COPY beta_utils.py /usr/local/bin
 RUN chmod +x /usr/local/bin/betamatch.py
 RUN chmod +x /usr/local/bin/corrplot.py

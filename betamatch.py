@@ -6,6 +6,8 @@ import os,subprocess,glob,shlex,re
 from subprocess import Popen,PIPE
 from scipy.stats import pearsonr, norm
 
+from beta_utils import *
+
 def flip_unified_strand(a1,a2):
     """
     Flips alleles to the A strand if necessary 
@@ -49,38 +51,6 @@ def pytabix(tb,chrom,start,end):
         return list(retval)
     except tabix.TabixError:
         return []
-
-def calculate_r2(dataset,x_label,y_label,stderr_label):
-    data_w=dataset[[x_label,y_label,stderr_label]].copy()
-    data_r2 = data_w[[x_label,y_label]].copy()
-    data_r2=data_r2.dropna(how="any")
-    data_w=data_w.dropna(how="any")
-    r_2=np.nan
-    r_w=np.nan
-    N_r=np.nan
-    N_w=np.nan
-    if data_r2.shape[0]>= 2:
-        x_array = data_r2[x_label].values
-        y_array = data_r2[y_label].values
-        r,_=pearsonr(x_array,y_array)
-        r_2=r**2
-        N_r=data_r2.shape[0]
-    if data_w.shape[0]>=2:
-        x_array = data_w[x_label].values
-        y_array = data_w[y_label].values
-        stderr = data_w[stderr_label].values
-        weight_array= 1/(stderr**2 + 1e-9) #weights as inverse of variance 
-        r_w=weighted_pearsonr(x_array,y_array,weight_array)
-        r_w=r_w**2
-        N_w=data_w.shape[0]
-    return (r_2,r_w,N_r,N_w)
-
-def weighted_cov(x,y,w):
-    """Weighted covariance between vectors x and y, with weights w"""
-    return np.average( ( (x-np.average(x,weights=w) ) * (y-np.average(y,weights=w)) ) ,weights=w )
-
-def weighted_pearsonr(x,y,w):
-    return weighted_cov(x,y,w)/np.sqrt( weighted_cov(x,x,w)*weighted_cov(y,y,w) )
 
 
 def match_beta(ext_path, fg_summary, info):
@@ -174,7 +144,7 @@ def main(info,match_file,out_f):
     """
     match_df=pd.read_csv(match_file,sep="\t",header=None,names=["EXT","FG"])
     output_list=[]
-    r2s=pd.DataFrame(columns=["phenotype","R^2","Weighted R^2 (1/ext var)","N (unweighted)","N (weighted)"],dtype=object)
+    r2s=[]
     for _,row in match_df.iterrows():
         ext_path = row["EXT"]
         fg_path = row["FG"]
@@ -184,12 +154,19 @@ def main(info,match_file,out_f):
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
-            r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
-            r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
+            stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se"]].dropna(axis="index",how="any")
+            if not stat_data.empty:
+                r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se")
+                [intercept,slope,stderr] = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
+                [intercept_w,slope_w,stderr_w] = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data["se"].values**2 + 1e-9) )
+                row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w}
+                row.update( {"Regression slope":slope,"Weighted regression slope":slope_w,"Regression intercept":intercept,"Weighted regression intercept":intercept_w,"Regression std.err.":stderr,"Weighted regression std.err.":stderr_w} )
+                r2s.append(row)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
+    r2s=pd.DataFrame(r2s)
     r2s.to_csv("r2_table.tsv",sep="\t",index=False,float_format="%.3f",na_rep="-")
     print("The following files were created:")
     [print(s) for s in output_list]
