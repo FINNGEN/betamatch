@@ -9,20 +9,22 @@ from typing import List, Dict, Any, Optional
 
 r = re.compile("x10",re.IGNORECASE)
 
-def standard_error(y: np.array, yhat: np.array, N: int) -> float:
-    """Calculate standard error of fit
+def standard_error_slope(x: np.array, y: np.array, yhat: np.array, N: int) -> float:
+    """Calculate standard error of slope estimate
     Args:
+        x (np.array): numpy array of observed estimators
         y (np.array): numpy array of observed values
         yhat (np.array): numpy array of estimated values
-        N (int): number of observations
+        N (int): number of observations, >= 3
     Returns:
-        (float): standard error of fit
+        (float): standard error of slope estimate
     """
-    return np.sqrt( np.sum( (y-yhat)**2 ) / N)
+    x_avg = np.average(x)
+    return np.sqrt( np.sum( (y-yhat)**2 ) / (N-2)) / np.sqrt(np.sum( (x-x_avg)**2 ) )
 
 def calculate_regression(x: np.array, y: np.array, weights: Optional[np.array] = None) -> List[float] :
     """Calculate regression coefficients from data
-    Use np.linalg.polyfit for linear regression.
+    Use np.linalg.polyfit for linear regression. std.err is std.err of slope estimate.
     Args:
         x (np.array): numpy array of x-coordinates
         y (np.array): numpy array of y-coordinates
@@ -35,7 +37,7 @@ def calculate_regression(x: np.array, y: np.array, weights: Optional[np.array] =
     slope = coeff[1]
     N=x.shape[0]
     yhat = intercept + slope*x
-    stderr = standard_error(y,yhat,N)
+    stderr = standard_error_slope(x,y,yhat,N)
     return [ intercept, slope, stderr]
 
 def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
