@@ -83,7 +83,7 @@ def weighted_pearsonr(x,y,w):
     return weighted_cov(x,y,w)/np.sqrt( weighted_cov(x,x,w)*weighted_cov(y,y,w) )
 
 
-def match_beta(ext_path, fg_summary, info):
+def match_beta(ext_path, fg_summary, info,pval_filter):
     """
     Match beta for external summary variants and our variants
     In: ext fpath, fg fpath, column tuple
@@ -101,7 +101,11 @@ def match_beta(ext_path, fg_summary, info):
 
     full_ext_data[info[5]]=full_ext_data[info[5]].astype(float)
     full_ext_data[info[4]]=full_ext_data[info[4]].astype(float)
+
+    #filter values by p-value
+    full_ext_data = full_ext_data[full_ext_data[info[5]]<=pval_filter]
     #replace missing se values with values derived from beta+pvalue
+    #full_ext_data[info[]] = #smth 
     for idx,row in full_ext_data.iterrows():
         if pd.isna(row["se"]):
             #calculate se
@@ -166,7 +170,7 @@ def match_beta(ext_path, fg_summary, info):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info,match_file,out_f):
+def main(info,match_file,out_f,pval_filter):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -183,7 +187,7 @@ def main(info,match_file,out_f):
         #check existance
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
-            matched_betas=match_beta(ext_path,fg_path,info)
+            matched_betas=match_beta(ext_path,fg_path,info,pval_filter)
             r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
             r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
@@ -202,5 +206,6 @@ if __name__=="__main__":
     parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
+    parser.add_argument("--pval-filter",default=1.0,type=float,help="Pval filter")
     args=parser.parse_args()
-    main(args.info,args.match_file,args.output_folder)
+    main(args.info,args.match_file,args.output_folder,args.pval_filter)
