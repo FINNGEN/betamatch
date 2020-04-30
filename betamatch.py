@@ -105,15 +105,9 @@ def match_beta(ext_path, fg_summary, info,pval_filter):
     #filter values by p-value
     full_ext_data = full_ext_data[full_ext_data[info[5]]<=pval_filter]
     #replace missing se values with values derived from beta+pvalue
-    #full_ext_data[info[]] = #smth 
-    for idx,row in full_ext_data.iterrows():
-        if pd.isna(row["se"]):
-            #calculate se
-            zscore=np.abs(norm.ppf(row["pval"]/2) )
-            se=np.abs(row["beta"])/zscore
-            full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    
-    full_ext_data["se"]=full_ext_data["se"].astype(float)
+    full_ext_data["se_calculated"] = np.abs(full_ext_data[info[4]])/np.abs(norm.ppf(full_ext_data[info[5]]/2) )#might work
+    full_ext_data["se"] = np.where(full_ext_data["se"].notna(),full_ext_data["se"].values,full_ext_data["se_calculated"].values)
+    #full_ext_data["se"]=full_ext_data["se"].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info[2]].apply(lambda x:bool(re.match(mset,x)))
     matchset2=full_ext_data[info[3]].apply(lambda x:bool(re.match(mset,x)))

@@ -8,6 +8,7 @@ task match_betas{
     String out_f = "out_f"
     String ext_repo_url
     Float pval_threshold
+    Float bmatch_pval_threshold
     command <<<
         #download github repo to ext_repo
         git clone ${ext_repo_url} ext_repo
@@ -16,7 +17,7 @@ task match_betas{
         #combine the different files into one match file
         paste exts ${write_lines(summary_stat_files)} > matchfile
         mkdir ${out_f}
-        betamatch.py --info ${sep=" " column_names} --match-file matchfile --output-folder ${out_f}
+        betamatch.py --info ${sep=" " column_names} --match-file matchfile --output-folder ${out_f} --pval-filter ${bmatch_pval_threshold}
         corrplot.py ${out_f} --fields unif_beta_fg unif_beta_ext --se-fields sebeta se --x-title "FinnGen beta" --y-title "External beta" --pval_field pval_ext --pval_threshold ${pval_threshold} --out "output.pdf"
     >>>
 
@@ -43,10 +44,11 @@ workflow betamatch{
     String ext_repo_url
     Array[File] temp = transpose(files)[1] 
     Float pval_threshold
+    Float bmatch_pval_threshold
     scatter (s in range( length( temp) ) ){#scatter magic, it just works
         String t = sub(temp[s],".gz",".gz.tbi") 
     }
     call match_betas {
-        input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url
+        input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url,bmatch_pval_threshold=bmatch_pval_threshold
     }
 }

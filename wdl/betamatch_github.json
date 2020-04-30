@@ -1,6 +1,7 @@
 {
-    "betamatch.docker":"eu.gcr.io/finngen-refinery-dev/betamatch:34954f_test2",
+    "betamatch.docker":"eu.gcr.io/finngen-refinery-dev/betamatch:123123_test",
     "betamatch.match_file":"gs://misc-analysis/betamatch_ext_data/github_match_file_r4.tsv",
     "betamatch.pval_threshold":1e-10,
+    "betamatch.bmatch_pval_threshold": 1.0,
     "betamatch.ext_repo_url":"https://github.com/FINNGEN/betamatch-ext-data.git"
 }
