@@ -8,7 +8,7 @@ from scipy.stats import pearsonr, norm
 
 def flip_unified_strand(a1,a2):
     """
-    Flips alleles to the A strand if necessary 
+    Flips alleles to the A strand if necessary
     """
     allele_dict={"T":"A","C":"G","G":"C"}
      # check if the A variant is present
@@ -42,7 +42,7 @@ def get_gzip_header(fname):
 def pytabix(tb,chrom,start,end):
     """Get genomic region from tabixed file
     In: pytabix handle, chromosome, start of region, end of region
-    Out: list of variants in region 
+    Out: list of variants in region
     """
     try:
         retval=tb.querys("{}:{}-{}".format(chrom,start,end))
@@ -69,7 +69,7 @@ def calculate_r2(dataset,x_label,y_label,stderr_label):
         x_array = data_w[x_label].values
         y_array = data_w[y_label].values
         stderr = data_w[stderr_label].values
-        weight_array= 1/(stderr**2 + 1e-9) #weights as inverse of variance 
+        weight_array= 1/(stderr**2 + 1e-9) #weights as inverse of variance
         r_w=weighted_pearsonr(x_array,y_array,weight_array)
         r_w=r_w**2
         N_w=data_w.shape[0]
@@ -108,7 +108,7 @@ def match_beta(ext_path, fg_summary, info):
             zscore=np.abs(norm.ppf(row["pval"]/2) )
             se=np.abs(row["beta"])/zscore
             full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    
+
     full_ext_data["se"]=full_ext_data["se"].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info[2]].apply(lambda x:bool(re.match(mset,x)))
@@ -119,19 +119,13 @@ def match_beta(ext_path, fg_summary, info):
 
     ext_data[info[2]]=ext_data[info[2]].apply(lambda x:x.upper())
     ext_data[info[3]]=ext_data[info[3]].apply(lambda x:x.upper())
-    #load corresponding data from fg file using tabix
-    if not os.path.exists("{}.tbi".format(fg_summary)):
-        raise FileNotFoundError("Tabix index for file {} not found. Make sure that the file is properly indexed.".format(fg_summary))
-    try:
-        tabix_handle = tabix.open(fg_summary)
-    except tabix.TabixError as e:
-        print("An error occurred when opening file {}. Make sure that the file exists and that it is correctly indexed.".format(fg_summary))
-        raise
-    tmp_lst=[]
-    for _,row in ext_data.iterrows():
-        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] )
-    header=get_gzip_header(fg_summary)
-    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
+
+
+    summary_data = pd.read_csv(fg_summary,sep="\t",dtype=ext_dtype)
+
+    ## minimise mem usage by only including variants (chr, pos) from external data that are needed
+    summary_data = pd.merge(summary_data, ext_data[[info[0], info[1]]], how='inner', on = [info[0], info[1]], copy=False)
+
     ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
     summary_data[info[4]]=pd.to_numeric(summary_data[info[4]])
     unif_alt="{}alt".format(unified_prefix)
@@ -157,11 +151,11 @@ def match_beta(ext_path, fg_summary, info):
     unif_beta_fg="{}_fg".format(unif_beta)
     joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]]=joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]].apply(
         lambda x: flip_beta(*x),axis=1,result_type="expand")
-    
+
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
-     "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
-     "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
+     "ref_ext", "alt_ext",  "ref_fg", "alt_fg",
+     "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg",
      "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
     joined_data=joined_data[field_order]
     return joined_data
@@ -169,8 +163,8 @@ def match_beta(ext_path, fg_summary, info):
 def main(info,match_file,out_f):
     """
     Match betas between external summ stats and FG summ stats
-    In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
-    Out:  
+    In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path
+    Out:
     """
     match_df=pd.read_csv(match_file,sep="\t",header=None,names=["EXT","FG"])
     output_list=[]
