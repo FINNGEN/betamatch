@@ -120,11 +120,25 @@ def match_beta(ext_path, fg_summary, info):
     ext_data[info[2]]=ext_data[info[2]].apply(lambda x:x.upper())
     ext_data[info[3]]=ext_data[info[3]].apply(lambda x:x.upper())
 
-
-    summary_data = pd.read_csv(fg_summary,sep="\t",dtype=ext_dtype)
-
-    ## minimise mem usage by only including variants (chr, pos) from external data that are needed
-    summary_data = pd.merge(summary_data, ext_data[[info[0], info[1]]], how='inner', on = [info[0], info[1]], copy=False)
+    if (os.path.getsize(ext_path) < 100000):
+        #for small files (top hits), load corresponding data from fg file using tabix
+        # largest file (T2D) is 41K
+        if not os.path.exists("{}.tbi".format(fg_summary)):
+            raise FileNotFoundError("Tabix index for file {} not found. Make sure that the file is properly indexed.".format(fg_summary))
+        try:
+            tabix_handle = tabix.open(fg_summary)
+        except tabix.TabixError as e:
+            print("An error occurred when opening file {}. Make sure that the file exists and that it is correctly indexed.".format(fg_summary))
+            raise
+        tmp_lst=[]
+        for _,row in ext_data.iterrows():
+            tmp_lst=tmp_lst+pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] )
+        header=get_gzip_header(fg_summary)
+        summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
+    else:
+        ## when large external data (full genome), read whole file first, then minimise mem usage by only including variants (chr, pos) from external data that are needed
+        summary_data = pd.read_csv(fg_summary,sep="\t",dtype=ext_dtype)
+        summary_data = pd.merge(summary_data, ext_data[[info[0], info[1]]], how='inner', on = [info[0], info[1]], copy=False)
 
     ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
     summary_data[info[4]]=pd.to_numeric(summary_data[info[4]])
