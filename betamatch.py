@@ -136,7 +136,7 @@ def match_beta(ext_path, fg_summary, info):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info,match_file,out_f):
+def main(info,match_file,out_f,pval_filter):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -154,6 +154,7 @@ def main(info,match_file,out_f):
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
+            matched_betas=matched_betas[matched_betas["pval_ext"]<=pval_filter]
             stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se"]].dropna(axis="index",how="any")
             if not stat_data.empty:
                 r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se")
@@ -179,5 +180,6 @@ if __name__=="__main__":
     parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
+    parser.add_argument("--pval-filter",default=1.0,type=float,help="Filter p-value for summary file")
     args=parser.parse_args()
-    main(args.info,args.match_file,args.output_folder)
+    main(args.info,args.match_file,args.output_folder,args.pval_filter)

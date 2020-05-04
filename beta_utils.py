@@ -76,7 +76,7 @@ def calculate_regression(x: np.array, y: np.array, weights: Optional[np.array] =
     Returns:
         (List[float]): List with [intercept, slope, stderr]
     """
-    coeff = np.polynomial.polynomial.polyfit(x,y,deg=1,w=weights)
+    coeff = np.polynomial.polynomial.polyfit(x,y,deg=[1],w=weights)
     intercept=coeff[0]
     slope = coeff[1]
     N=x.shape[0]
