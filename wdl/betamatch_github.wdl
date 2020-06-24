@@ -17,8 +17,8 @@ task match_betas{
         #combine the different files into one match file
         paste exts ${write_lines(summary_stat_files)} > matchfile
         mkdir ${out_f}
-        betamatch.py --info ${sep=" " column_names} --match-file matchfile --output-folder ${out_f}
-        corrplot.py ${out_f} --fields unif_beta_fg unif_beta_ext --se-fields sebeta se --x-title "FinnGen beta" --y-title "External beta" --pval_field pval_ext --pval_threshold ${pval_threshold} --out "output.pdf"
+        betamatch.py --info ${sep=" " column_names} --match-file matchfile --output-folder ${out_f} --pval-filter ${pval_threshold}
+        corrplot.py ${out_f} --fields unif_beta_ext unif_beta_fg --se-fields se sebeta --x-title "External beta" --y-title "FinnGen beta" --pval_field pval_ext --pval_threshold ${pval_threshold} --out "output.pdf"
     >>>
 
     runtime {
