@@ -3,7 +3,7 @@ task match_betas{
     Array[File] tbi_indexes
     Array[String] ext_files = transpose(match_file)[0]
     Array[File] summary_stat_files = transpose(match_file)[1] 
-    Array[String] column_names=["\"#chrom\"","pos","ref","alt","beta","pval"]
+    Array[String] column_names=["\"#chrom\"","pos","ref","alt","beta","pval","study_doi"]
     String docker
     String out_f = "out_f"
     String ext_repo_url
