@@ -143,7 +143,7 @@ def extract_doi(ext_path, info):
     Out: string with all dois contained in the file
     """
     ext_dtype = {info[6]:object}
-    full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype)
+    full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype,usecols=[info[6]])
     doi=full_ext_data.study_doi.unique()
     doi_concat=','.join(doi)
     return doi_concat
