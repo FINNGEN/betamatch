@@ -92,8 +92,8 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
         geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
         geom_point(color="red",size=0.5)+
-        annotate("text",label="R^2 (pearsonr): {:>5.2g} slope: {:>5.2g} stderr: {:>5.2g} pval: {:>5.2g}".format(r_2_normal,reg.slope,reg.stderr,reg.pval),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
-        annotate("text",label="R^2 (weighted): {:>5.2g} slope: {:>5.2g} stderr: {:>5.2g} pval: {:>5.2g}".format(r_2_weighted,reg_w.slope,reg_w.stderr,reg_w.pval),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
+        annotate("text",label="R^2 (pearsonr): {:>5.2g} slope: {:>5.2g} stderr: {:>5.2g}".format(r_2_normal,reg.slope,reg.stderr),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
+        annotate("text",label="R^2 (weighted): {:>5.2g} slope: {:>5.2g} stderr: {:>5.2g}".format(r_2_weighted,reg_w.slope,reg_w.stderr),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
         coord_cartesian(xlim=xlim,ylim=ylim)+
         ggtitle(pheno)+
         #scale_x_continuous(limits=xlim)+
