@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 from scipy.stats import pearsonr, norm
-import statsmodels as st
 import statsmodels.regression.linear_model as lm
 import numpy as np #type: ignore
 import pandas as pd #type: ignore
