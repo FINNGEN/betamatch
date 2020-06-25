@@ -77,6 +77,6 @@ def calculate_regression(x: np.array,
     stderr = results.bse[0]
     tstat = results.tvalues[0]
     pval = results.pvalues[0]
-    rsquared = results.rsquared
+    rsquared = results.rsquared_adj
 
     return RegressionResults(slope, stderr, tstat, pval,rsquared)
