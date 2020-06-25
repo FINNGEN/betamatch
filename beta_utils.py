@@ -1,9 +1,12 @@
 #! /usr/bin/env python3
 
 from scipy.stats import pearsonr, norm
+import statsmodels as st
+import statsmodels.regression.linear_model as lm
 import numpy as np #type: ignore
 import pandas as pd #type: ignore
 from typing import List, Dict, Tuple, Optional
+from collections import namedtuple
 
 def weighted_cov(x: np.array, y: np.array, w: np.array) -> float:
     """Weighted covariance between vectors x and y, with weights w
@@ -53,33 +56,28 @@ def calculate_r2(dataset: pd.DataFrame, x_label: str, y_label: str, stderr_label
         N_w=data_w.shape[0]
     return (r_2,r_w,N_r,N_w)
 
-def standard_error_slope(x: np.array, y: np.array, yhat: np.array, N: int) -> float:
-    """Calculate standard error of slope estimate
-    Args:
-        x (np.array): numpy array of observed estimators
-        y (np.array): numpy array of observed values
-        yhat (np.array): numpy array of estimated values
-        N (int): number of observations, >= 3
-    Returns:
-        (float): standard error of slope estimate
-    """
-    x_avg = np.average(x)
-    return np.sqrt( np.sum( (y-yhat)**2 ) / (N-2)) / np.sqrt(np.sum( (x-x_avg)**2 ) )
 
-def calculate_regression(x: np.array, y: np.array, weights: Optional[np.array] = None) -> List[float] :
-    """Calculate regression coefficients from data
-    Use np.linalg.polyfit for linear regression. std.err is std.err of slope estimate.
+RegressionResults = namedtuple('RegressionResults',['slope', 'stderr', 'tstat', 'pval', 'rsquared'])
+
+def calculate_regression(x: np.array,
+                        y: np.array,
+                        weights: Optional[np.array] = None)-> RegressionResults :
+    """Calculate regression y=bx coefficients from data.
+    Model uses statsmodels.regression.linear_model.WLS.
     Args:
         x (np.array): numpy array of x-coordinates
         y (np.array): numpy array of y-coordinates
-        weights (Optional[np.array]): numpy array of point weights
+        weights (Optional[np.array]): numpy array of point weights. These are passed directly to WSL.
     Returns:
-        (List[float]): List with [intercept, slope, stderr]
+        (RegressionResults): Named tuple with variables slope, stderr, t-statistic, pvalue, rsquared
     """
-    coeff = np.polynomial.polynomial.polyfit(x,y,deg=[1],w=weights)
-    intercept=coeff[0]
-    slope = coeff[1]
-    N=x.shape[0]
-    yhat = intercept + slope*x
-    stderr = standard_error_slope(x,y,yhat,N)
-    return [ intercept, slope, stderr]
+    weights = weights if type(weights) != type(None) else 1.0
+    model = lm.WLS(y,x,weights)
+    results = model.fit()
+    slope=results.params[0]
+    stderr = results.bse[0]
+    tstat = results.tvalues[0]
+    pval = results.pvalues[0]
+    rsquared = results.rsquared
+
+    return RegressionResults(slope, stderr, tstat, pval,rsquared)
