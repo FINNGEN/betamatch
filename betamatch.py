@@ -151,8 +151,8 @@ def extract_doi(ext_path, info):
 def main(info,match_file,out_f,pval_filter):
     """
     Match betas between external summ stats and FG summ stats
-    In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
-    Out:  
+    In: column tuple, matching tsv file path, output folder, pvalue for filtering
+    Out: Table containing summary for each line in match_file, text file containing paired matched betas for each line in match_file
     """
     match_df=pd.read_csv(match_file,sep="\t",header=None,names=["EXT","FG"])
     output_list=[]
