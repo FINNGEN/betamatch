@@ -90,17 +90,17 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     Out: df containing the results. DOES NOT SAVE FILES
     """
     unified_prefix="unif_"
-    ext_dtype = {info[0]:object,
-                info[1]:object,
-                info[2]:object,
-                info[3]:object,
-                info[4]:float,
-                info[5]:float,}
+    ext_dtype = {info_ext[0]:object,
+                info_ext[1]:object,
+                info_ext[2]:object,
+                info_ext[3]:object,
+                info_ext[4]:float,
+                info_ext[5]:float,}
     full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype)
-    full_ext_data[[info[2],info[3]]]=full_ext_data[[info[2],info[3]]].fillna(value="-")
+    full_ext_data[[info_ext[2],info_ext[3]]]=full_ext_data[[info_ext[2],info_ext[3]]].fillna(value="-")
 
-    full_ext_data[info[5]]=full_ext_data[info[5]].astype(float)
-    full_ext_data[info[4]]=full_ext_data[info[4]].astype(float)
+    full_ext_data[info_ext[5]]=full_ext_data[info_ext[5]].astype(float)
+    full_ext_data[info_ext[4]]=full_ext_data[info_ext[4]].astype(float)
     #replace missing se values with values derived from beta+pvalue
     for idx,row in full_ext_data.iterrows():
         if pd.isna(row["se"]):
@@ -111,14 +111,14 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     
     full_ext_data["se"]=full_ext_data["se"].astype(float)
     mset='^[acgtACGT]+$'
-    matchset1=full_ext_data[info[2]].apply(lambda x:bool(re.match(mset,x)))
-    matchset2=full_ext_data[info[3]].apply(lambda x:bool(re.match(mset,x)))
+    matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
+    matchset2=full_ext_data[info_ext[3]].apply(lambda x:bool(re.match(mset,x)))
     ext_data=full_ext_data[matchset1 & matchset2].copy()
     invalid_ext_data=full_ext_data[~(matchset1 & matchset2)].copy()
     invalid_ext_data["invalid_data"]="YES"
 
-    ext_data[info[2]]=ext_data[info[2]].apply(lambda x:x.upper())
-    ext_data[info[3]]=ext_data[info[3]].apply(lambda x:x.upper())
+    ext_data[info_ext[2]]=ext_data[info_ext[2]].apply(lambda x:x.upper())
+    ext_data[info_ext[3]]=ext_data[info_ext[3]].apply(lambda x:x.upper())
     #load corresponding data from fg file using tabix
     if not os.path.exists("{}.tbi".format(fg_summary)):
         raise FileNotFoundError("Tabix index for file {} not found. Make sure that the file is properly indexed.".format(fg_summary))
@@ -129,18 +129,18 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
         raise
     tmp_lst=[]
     for _,row in ext_data.iterrows():
-        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] )
+        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info_fg[0]],row[info_fg[1]], row[info_fg[1]] )
     header=get_gzip_header(fg_summary)
     summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
-    ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
-    summary_data[info[4]]=pd.to_numeric(summary_data[info[4]])
+    ext_data[info_fg[4]]=pd.to_numeric(ext_data[info_fg[4]],errors='coerce')
+    summary_data[info_fg[4]]=pd.to_numeric(summary_data[info_fg[4]])
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)
-    summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
-    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+    summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     unif_beta="{}beta".format(unified_prefix)
-    summary_data[unif_beta]=summary_data[info[4]]
-    ext_data[unif_beta]=ext_data[info[4]]
+    summary_data[unif_beta]=summary_data[info_fg[4]]
+    ext_data[unif_beta]=ext_data[info_fg[4]]
 
     summary_data["sort_dir"] = summary_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x) ) != list(x)) else 1,axis=1)
     summary_data[[unif_ref,unif_alt]]=summary_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
@@ -151,13 +151,16 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
-    joined_data=pd.merge(ext_data, summary_data,how="left",on=[info[0],info[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
+
+    joined_data=pd.merge(ext_data, summary_data,how="left",left_on=[info_ext[0],info_ext[1],unif_alt,unif_ref],right_on=[info_fg[0],info_fg[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
 
     unif_beta_ext="{}_ext".format(unif_beta)
     unif_beta_fg="{}_fg".format(unif_beta)
     joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]]=joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]].apply(
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
+    print joined_data.head(2)
+
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
      "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
@@ -166,7 +169,7 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info_ext, info_fg,match_file,out_f):
+def main(info_ext,info_fg,match_file,out_f):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -183,7 +186,7 @@ def main(info_ext, info_fg,match_file,out_f):
         #check existance
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
-            matched_betas=match_beta(ext_path,fg_path,info)
+            matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
             r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
             r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
@@ -199,8 +202,8 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
     #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
-    parser.add_argument("--info-ext",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
-    parser.add_argument("--info-fg",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--info-ext",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names for external file")
+    parser.add_argument("--info-fg",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names for finngen file")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
     args=parser.parse_args()
