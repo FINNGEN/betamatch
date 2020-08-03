@@ -3,7 +3,8 @@ task match_betas{
     Array[File] tbi_indexes
     Array[String] ext_files = transpose(match_file)[0]
     Array[File] summary_stat_files = transpose(match_file)[1] 
-    Array[String] column_names=["\"#chrom\"","pos","ref","alt","beta","pval"]
+    Array[String] column_names_ext
+    Array[String] column_names_fg
     String docker
     String out_f = "out_f"
     String ext_repo_url
@@ -17,7 +18,7 @@ task match_betas{
         #combine the different files into one match file
         paste exts ${write_lines(summary_stat_files)} > matchfile
         mkdir ${out_f}
-        betamatch.py --info ${sep=" " column_names} --match-file matchfile --output-folder ${out_f}
+        betamatch.py --info-ext ${sep=" " column_names_ext} --info-fg ${sep=" " column_names_fg} --match-file matchfile --output-folder ${out_f}
         corrplot.py ${out_f} --fields unif_beta_fg unif_beta_ext --se-fields sebeta se --x-title "FinnGen beta" --y-title "External beta" --pval_field pval_ext --pval_threshold ${pval_threshold} --out "output.pdf"
     >>>
 
@@ -45,10 +46,12 @@ workflow betamatch{
     String ext_repo_branch
     Array[File] temp = transpose(files)[1] 
     Float pval_threshold
+    Array[String] column_names_ext
+    Array[String] column_names_fg
     scatter (s in range( length( temp) ) ){#scatter magic, it just works
         String t = sub(temp[s],".gz",".gz.tbi") 
     }
     call match_betas {
-        input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url, ext_repo_branch = ext_repo_branch
+        input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url, ext_repo_branch = ext_repo_branch, column_names_ext = column_names_ext, column_names_fg = column_names_fg
     }
 }

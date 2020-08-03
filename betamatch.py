@@ -83,7 +83,7 @@ def weighted_pearsonr(x,y,w):
     return weighted_cov(x,y,w)/np.sqrt( weighted_cov(x,x,w)*weighted_cov(y,y,w) )
 
 
-def match_beta(ext_path, fg_summary, info):
+def match_beta(ext_path, fg_summary, info_ext, info_fg):
     """
     Match beta for external summary variants and our variants
     In: ext fpath, fg fpath, column tuple
@@ -166,7 +166,7 @@ def match_beta(ext_path, fg_summary, info):
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info,match_file,out_f):
+def main(info_ext, info_fg,match_file,out_f):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -199,8 +199,9 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
     #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
-    parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--info-ext",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--info-fg",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
     args=parser.parse_args()
-    main(args.info,args.match_file,args.output_folder)
+    main(args.info_ext,args.info_fg,args.match_file,args.output_folder)
