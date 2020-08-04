@@ -159,7 +159,7 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]]=joined_data[[unif_ref,unif_alt,unif_beta_ext,unif_beta_fg]].apply(
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
-    print joined_data.head(2)
+    print(joined_data.head(2))
 
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
