@@ -4,6 +4,6 @@
     "betamatch.pval_threshold":1e-10,
     "betamatch.ext_repo_url":"https://github.com/FINNGEN/betamatch-ext-data.git",
     "betamatch.ext_repo_branch":"master", 
-    "betamatch.column_names_ext":["\"#chrom\"","pos","ref","alt","beta","pval"],
-    "betamatch.column_names_fg":["\"#chrom\"","pos","ref","alt","beta","pval"]
+    "betamatch.column_names_ext":["\"#chrom\"","pos","ref","alt","beta","pval","se"],
+    "betamatch.column_names_fg":["\"#chrom\"","pos","ref","alt","beta","pval","sebeta"]
 }
