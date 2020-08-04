@@ -116,7 +116,6 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
             zscore=np.abs(norm.ppf(row["pval"]/2) )
             se=np.abs(row["beta"])/zscore
             full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-
     full_ext_data["se"]=full_ext_data["se"].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
@@ -124,7 +123,6 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     ext_data=full_ext_data[matchset1 & matchset2].copy()
     invalid_ext_data=full_ext_data[~(matchset1 & matchset2)].copy()
     invalid_ext_data["invalid_data"]="YES"
-
     ext_data[info_ext[2]]=ext_data[info_ext[2]].apply(lambda x:x.upper())
     ext_data[info_ext[3]]=ext_data[info_ext[3]].apply(lambda x:x.upper())
    
@@ -146,10 +144,8 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     summary_data[info_fg[4]]=pd.to_numeric(summary_data[info_fg[4]])
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)
-
     summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info_ext[2], info_ext[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
-
     unif_beta="{}beta".format(unified_prefix)
     summary_data[unif_beta]=summary_data[info_fg[4]]
     ext_data[unif_beta]=ext_data[info_ext[4]]
@@ -158,16 +154,13 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     summary_data[[unif_ref,unif_alt]]=summary_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
     summary_data[unif_beta]=summary_data["sort_dir"]*summary_data[unif_beta]
     summary_data=summary_data.drop(labels="sort_dir",axis="columns")
-    
     ext_data["sort_dir"] = ext_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x)) != list(x)) else 1,axis=1)
     ext_data[[unif_ref,unif_alt]]=ext_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
     ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
-
     info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext))} 
     summary_data.rename(columns=info_fg_rename, inplace=True)
-
     joined_data=pd.merge(ext_data, summary_data,how="left", on=[info_ext[0],info_ext[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
 
     unif_beta_ext="{}_ext".format(unif_beta)
@@ -181,7 +174,6 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
      "beta_ext", "beta_fg", "pval_ext", "pval_fg",
      "se_ext", "se_fg",# (SR: removed, "se", "sebeta", because they are not part of info_fg or info_ext )"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
      "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
-    
     joined_data=joined_data[field_order]
     return joined_data
 
