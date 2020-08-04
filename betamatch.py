@@ -95,7 +95,15 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
                 info_ext[2]:object,
                 info_ext[3]:object,
                 info_ext[4]:float,
-                info_ext[5]:float,}
+                info_ext[5]:float,                
+                info_ext[6]:float,}
+    fg_dtype = {info_fg[0]:object,
+                info_fg[1]:object,
+                info_fg[2]:object,
+                info_fg[3]:object,
+                info_fg[4]:float,
+                info_fg[5]:float,
+                info_fg[6]:float,}
     full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype)
     full_ext_data[[info_ext[2],info_ext[3]]]=full_ext_data[[info_ext[2],info_ext[3]]].fillna(value="-")
 
@@ -108,7 +116,7 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
             zscore=np.abs(norm.ppf(row["pval"]/2) )
             se=np.abs(row["beta"])/zscore
             full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    
+
     full_ext_data["se"]=full_ext_data["se"].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
@@ -119,6 +127,7 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
 
     ext_data[info_ext[2]]=ext_data[info_ext[2]].apply(lambda x:x.upper())
     ext_data[info_ext[3]]=ext_data[info_ext[3]].apply(lambda x:x.upper())
+   
     #load corresponding data from fg file using tabix
     if not os.path.exists("{}.tbi".format(fg_summary)):
         raise FileNotFoundError("Tabix index for file {} not found. Make sure that the file is properly indexed.".format(fg_summary))
@@ -129,30 +138,37 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
         raise
     tmp_lst=[]
     for _,row in ext_data.iterrows():
-        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info_fg[0]],row[info_fg[1]], row[info_fg[1]] )
+        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info_ext[0]],row[info_ext[1]],row[info_ext[1]] )
     header=get_gzip_header(fg_summary)
-    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
-    ext_data[info_fg[4]]=pd.to_numeric(ext_data[info_fg[4]],errors='coerce')
+
+    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=fg_dtype)
+    ext_data[info_ext[4]]=pd.to_numeric(ext_data[info_ext[4]],errors='coerce')
     summary_data[info_fg[4]]=pd.to_numeric(summary_data[info_fg[4]])
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)
+
     summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
-    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info_ext[2], info_ext[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+
     unif_beta="{}beta".format(unified_prefix)
     summary_data[unif_beta]=summary_data[info_fg[4]]
-    ext_data[unif_beta]=ext_data[info_fg[4]]
+    ext_data[unif_beta]=ext_data[info_ext[4]]
 
     summary_data["sort_dir"] = summary_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x) ) != list(x)) else 1,axis=1)
     summary_data[[unif_ref,unif_alt]]=summary_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
     summary_data[unif_beta]=summary_data["sort_dir"]*summary_data[unif_beta]
     summary_data=summary_data.drop(labels="sort_dir",axis="columns")
+    
     ext_data["sort_dir"] = ext_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x)) != list(x)) else 1,axis=1)
     ext_data[[unif_ref,unif_alt]]=ext_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
     ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
 
-    joined_data=pd.merge(ext_data, summary_data,how="left",left_on=[info_ext[0],info_ext[1],unif_alt,unif_ref],right_on=[info_fg[0],info_fg[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
+    info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext))} 
+    summary_data.rename(columns=info_fg_rename, inplace=True)
+
+    joined_data=pd.merge(ext_data, summary_data,how="left", on=[info_ext[0],info_ext[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
 
     unif_beta_ext="{}_ext".format(unif_beta)
     unif_beta_fg="{}_fg".format(unif_beta)
@@ -162,8 +178,10 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
     field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
      "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
-     "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
+     "beta_ext", "beta_fg", "pval_ext", "pval_fg",
+     "se_ext", "se_fg",# (SR: removed, "se", "sebeta", because they are not part of info_fg or info_ext )"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
      "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
+    
     joined_data=joined_data[field_order]
     return joined_data
 
@@ -185,7 +203,7 @@ def main(info_ext,info_fg,match_file,out_f):
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
-            r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se")
+            r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se_ext")
             r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
@@ -200,8 +218,8 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
     #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
-    parser.add_argument("--info-ext",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names for external file")
-    parser.add_argument("--info-fg",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names for finngen file")
+    parser.add_argument("--info-ext",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for external file")
+    parser.add_argument("--info-fg",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for finngen file")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
     args=parser.parse_args()
