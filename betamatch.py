@@ -169,13 +169,17 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
-    field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
-     "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
-     "beta_ext", "beta_fg", "pval_ext", "pval_fg",
-     "se_ext", "se_fg",# (SR: removed, "se", "sebeta", because they are not part of info_fg or info_ext )"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
+    field_order=["trait", info_ext[0], info_ext[1],
+     info_ext[2]+"_ext",info_ext[3]+"_ext", 
+     info_ext[2]+"_fg", info_ext[3]+"_fg", 
+     info_ext[4]+"_ext",info_ext[4]+"_fg",
+     info_ext[5]+"_ext",info_ext[5]+"_fg",
+     info_ext[6]+"_ext",info_ext[6]+"_fg",
      "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
     joined_data=joined_data[field_order]
     return joined_data
+
+    
 
 def main(info_ext,info_fg,match_file,out_f):
     """
