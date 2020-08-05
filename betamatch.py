@@ -111,12 +111,12 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     full_ext_data[info_ext[4]]=full_ext_data[info_ext[4]].astype(float)
     #replace missing se values with values derived from beta+pvalue
     for idx,row in full_ext_data.iterrows():
-        if pd.isna(row["se"]):
+        if pd.isna(row[info_ext[6]]):
             #calculate se
-            zscore=np.abs(norm.ppf(row["pval"]/2) )
-            se=np.abs(row["beta"])/zscore
-            full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    full_ext_data["se"]=full_ext_data["se"].astype(float)
+            zscore=np.abs(norm.ppf(row[info_ext[5]]/2) )
+            se=np.abs(row[info_ext[4]])/zscore
+            full_ext_data.loc[idx,info_ext[6]] = np.nan if se <= 0 else se
+    full_ext_data[info_ext[6]]=full_ext_data[info_ext[6]].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
     matchset2=full_ext_data[info_ext[3]].apply(lambda x:bool(re.match(mset,x)))
@@ -169,11 +169,13 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
-    field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
-     "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
-     "beta_ext", "beta_fg", "pval_ext", "pval_fg",
-     "se_ext", "se_fg",# (SR: removed, "se", "sebeta", because they are not part of info_fg or info_ext )"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction","study_doi"]
+    field_order=["trait", info_ext[0], info_ext[1],
+     info_ext[2]+"_ext",info_ext[3]+"_ext", 
+     info_ext[2]+"_fg", info_ext[3]+"_fg", 
+     info_ext[4]+"_ext",info_ext[4]+"_fg",
+     info_ext[5]+"_ext",info_ext[5]+"_fg",
+     info_ext[6]+"_ext",info_ext[6]+"_fg",
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
     joined_data=joined_data[field_order]
     return joined_data
 
