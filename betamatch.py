@@ -183,7 +183,7 @@ def extract_doi(joined_data, info):
     In: joined data, column in ext file with doi
     Out: string with all dois contained in the file
     """
-    doi_concat=','.join(joined_data.study_doi.unique())
+    doi_concat=','.join(joined_data[info[7]].unique())
     return doi_concat
 
 def main(info_ext,info_fg,match_file,out_f):
