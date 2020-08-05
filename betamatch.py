@@ -111,12 +111,12 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     full_ext_data[info_ext[4]]=full_ext_data[info_ext[4]].astype(float)
     #replace missing se values with values derived from beta+pvalue
     for idx,row in full_ext_data.iterrows():
-        if pd.isna(row["se"]):
+        if pd.isna(row[info_ext[6]]):
             #calculate se
-            zscore=np.abs(norm.ppf(row["pval"]/2) )
-            se=np.abs(row["beta"])/zscore
-            full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    full_ext_data["se"]=full_ext_data["se"].astype(float)
+            zscore=np.abs(norm.ppf(row[info_ext[5]]/2) )
+            se=np.abs(row[info_ext[4]])/zscore
+            full_ext_data.loc[idx,info_ext[6]] = np.nan if se <= 0 else se
+    full_ext_data[info_ext[6]]=full_ext_data[info_ext[6]].astype(float)
     mset='^[acgtACGT]+$'
     matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
     matchset2=full_ext_data[info_ext[3]].apply(lambda x:bool(re.match(mset,x)))
