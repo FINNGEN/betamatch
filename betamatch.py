@@ -159,7 +159,7 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
-    info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext))} 
+    info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext)-1)} 
     summary_data.rename(columns=info_fg_rename, inplace=True)
     joined_data=pd.merge(ext_data, summary_data,how="left", on=[info_ext[0],info_ext[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
 
@@ -179,7 +179,14 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
     joined_data=joined_data[field_order]
     return joined_data
 
-    
+def extract_doi(joined_data, info):
+    """
+    Output doi strings
+    In: joined data, column in ext file with doi
+    Out: string with all dois contained in the file
+    """
+    doi_concat=','.join(joined_data[info].unique())
+    return doi_concat
 
 def main(info_ext,info_fg,match_file,out_f):
     """
@@ -189,7 +196,7 @@ def main(info_ext,info_fg,match_file,out_f):
     """
     match_df=pd.read_csv(match_file,sep="\t",header=None,names=["EXT","FG"])
     output_list=[]
-    r2s=pd.DataFrame(columns=["phenotype","R^2","Weighted R^2 (1/ext var)","N (unweighted)","N (weighted)"],dtype=object)
+    r2s=pd.DataFrame(columns=["phenotype","R^2","Weighted R^2 (1/ext var)","N (unweighted)","N (weighted)","study_doi"],dtype=object)
     for _,row in match_df.iterrows():
         ext_path = row["EXT"]
         fg_path = row["FG"]
@@ -200,7 +207,8 @@ def main(info_ext,info_fg,match_file,out_f):
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
             r2,w_r2,n_r,n_w=calculate_r2(matched_betas,"unif_beta_ext","unif_beta_fg","se_ext")
-            r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w},ignore_index=True,sort=False)
+            dois_ext=extract_doi(matched_betas,info_ext[7])
+            r2s=r2s.append({"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w,"study_doi":dois_ext},ignore_index=True,sort=False)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
@@ -214,7 +222,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
     #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
-    parser.add_argument("--info-ext",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for external file")
+    parser.add_argument("--info-ext",nargs=8,required=True,default=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),metavar=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),help="column names for external file")
     parser.add_argument("--info-fg",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for finngen file")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
