@@ -158,17 +158,22 @@ def main(info,match_file,out_f,pval_filter):
             stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se"]].dropna(axis="index",how="any")
             if not stat_data.empty:
                 r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se")
-                [intercept,slope,stderr] = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
-                [intercept_w,slope_w,stderr_w] = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data["se"].values**2 + 1e-9) )
+                normal_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
+                weighted_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data["se"]**2) )
                 row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w}
-                row.update( {"Regression slope":slope,"Weighted regression slope":slope_w,"Regression intercept":intercept,"Weighted regression intercept":intercept_w,"Regression std.err.":stderr,"Weighted regression std.err.":stderr_w} )
+                row.update( {"Regression slope":normal_regression.slope,"Weighted regression slope":weighted_regression.slope,"Regression intercept":0.0,
+                    "Weighted regression intercept":0.0,
+                    "Regression std.err.":normal_regression.stderr,
+                    "Weighted regression std.err.":weighted_regression.stderr,
+                    "Regression slope p-value": normal_regression.pval,
+                    "Weighted regression slope p-value": weighted_regression.pval} )
                 r2s.append(row)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
     r2s=pd.DataFrame(r2s)
-    r2s.to_csv("r2_table.tsv",sep="\t",index=False,float_format="%.3f",na_rep="-")
+    r2s.to_csv("r2_table.tsv",sep="\t",index=False,float_format="%.3g",na_rep="-")
     print("The following files were created:")
     [print(s) for s in output_list]
 
