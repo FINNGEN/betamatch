@@ -96,7 +96,8 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
                 info_ext[3]:object,
                 info_ext[4]:float,
                 info_ext[5]:float,                
-                info_ext[6]:float,}
+                info_ext[6]:float,
+                info_ext[7]:object,}
     fg_dtype = {info_fg[0]:object,
                 info_fg[1]:object,
                 info_fg[2]:object,
@@ -175,7 +176,8 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
      info_ext[4]+"_ext",info_ext[4]+"_fg",
      info_ext[5]+"_ext",info_ext[5]+"_fg",
      info_ext[6]+"_ext",info_ext[6]+"_fg",
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", "study_doi"]
+
     joined_data=joined_data[field_order]
     return joined_data
 
