@@ -1,7 +1,5 @@
 pipeline {
-  agent {
-    docker { image 'ubuntu:18.04' }
-  }
+  agent any
 
   stages {
     stage('Build') {
@@ -17,12 +15,13 @@ pipeline {
     stage('Tests') {
       /*set up tests*/
       steps{
-        sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
+        sh 'python --version'
+        /*sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
         sh 'curl -O https://github.com/broadinstitute/cromwell/releases/download/48/womtool-48.jar'
         sh 'chmod +x womtool-48.jar'
         sh './womtool-48.jar betamatch/wdl/betamatch_github.wdl -i betamatch/wdl/betamatch_github.wdl'
         sh 'cd betamatch'
-        sh 'python3 -m pytest'
+        sh 'python3 -m pytest'*/
       }
     }
     stage('Metrics') {
