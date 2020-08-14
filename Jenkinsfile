@@ -4,7 +4,7 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-	script {  c = docker.build("betamatch/jenkins_tests:test-" + "$BUILD_NUMBER", "-f docker/Dockerfile ./")
+	script {  c = docker.build("phewas-development/betamatch:test-" + "$BUILD_NUMBER", "-f docker/Dockerfile ./")
 	  docker.withRegistry('http://eu.gcr.io/phewas-development', 'gcr:phewas-development') {
 			      c.push("test-${env.BUILD_NUMBER}")
 			      }
