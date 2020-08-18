@@ -18,14 +18,14 @@ pipeline {
         c = docker.build("phewas-development/betamatch:test-" + "$BUILD_NUMBER", "-f docker/Dockerfile ./")
         c.inside("-u root"){
           sh """
-          python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit
+          python3 -m pip install pytest 
           #dl cromwell 48 womtool
           curl -O https://github.com/broadinstitute/cromwell/releases/download/48/womtool-48.jar
           chmod +x womtool-48.jar
           #run it
-          ./womtool-48.jar betamatch/wdl/betamatch_github.wdl -i betamatch/wdl/betamatch_github.wdl
+          ./womtool-48.jar /usr/local/betamatch/wdl/betamatch_github.wdl -i /usr/local/betamatch/wdl/betamatch_github.wdl
           #run python tests
-          cd betamatch
+          cd /usr/local/betamatch
           python3 -m pytest 
           """
         }
