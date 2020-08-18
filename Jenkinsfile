@@ -38,7 +38,6 @@ pipeline {
         sh 'python3 -m pytest'*/
       }
     }
-  /*
     stage('Metrics') {
       steps {
         withSonarQubeEnv('sonar') {
@@ -51,6 +50,5 @@ pipeline {
         }
       }
     }
-  */
   }
 }

@@ -50,6 +50,7 @@ def pytabix(tb,chrom,start,end):
     except tabix.TabixError:
         return []
 
+
 def calculate_r2(dataset,x_label,y_label,stderr_label):
     data_w=dataset[[x_label,y_label,stderr_label]].copy()
     data_r2 = data_w[[x_label,y_label]].copy()
