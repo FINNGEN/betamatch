@@ -19,6 +19,7 @@ pipeline {
       steps{
         script{
           sh 'ls -la'
+          sh 'python3 --version'
         }
         /*sh 'python --version'
         sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
