@@ -23,7 +23,7 @@ pipeline {
                                     wget https://github.com/broadinstitute/cromwell/releases/download/48/womtool-48.jar
                                     #install java : ( openjdk-8-jre-headless
                                     apt-get install -y openjdk-8-jre-headless
-                                    java -jar womtool-48.jar wdl/betamatch_github.wdl -i wdl/betamatch_github.wdl"""}
+                                    java -jar womtool-48.jar validate wdl/betamatch_github.wdl -i wdl/betamatch_github.wdl"""}
         }
         /*sh 'python --version'
         sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
