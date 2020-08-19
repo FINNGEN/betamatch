@@ -1,7 +1,6 @@
+def c
 pipeline {
-  agent {
-    docker {image 'ubuntu:18.04'}
-  }
+  agent any
 
   stages {
     stage('Build') {
@@ -18,8 +17,9 @@ pipeline {
       /*set up tests*/
       steps{
         script{
-          sh 'ls -la'
-          sh 'python3 --version'
+          c.inside("-u root"){sh 'python3 -m pip install pytest'}
+          c.inside("-u root"){sh 'cd /usr/local/betamatch'}
+          c.inside("-u root"){sh 'python3 -m pytest'}
         }
         /*sh 'python --version'
         sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
