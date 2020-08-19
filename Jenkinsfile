@@ -21,8 +21,7 @@ pipeline {
                                     cd /usr/local/betamatch
                                     python3 -m pytest
                                     wget https://github.com/broadinstitute/cromwell/releases/download/48/womtool-48.jar
-                                    chmod +x womtool-48.jar
-                                    ./womtool-48.jar wdl/betamatch_github.wdl -i wdl/betamatch_github.wdl"""}
+                                    java -jar womtool-48.jar wdl/betamatch_github.wdl -i wdl/betamatch_github.wdl"""}
         }
         /*sh 'python --version'
         sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
