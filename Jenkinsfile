@@ -17,9 +17,9 @@ pipeline {
       /*set up tests*/
       steps{
         script{
-          c.inside("-u root"){sh 'python3 -m pip install pytest'}
-          c.inside("-u root"){sh 'cd /usr/local/betamatch'}
-          c.inside("-u root"){sh 'python3 -m pytest'}
+          c.inside("-u root"){sh """python3 -m pip install pytest
+                                    cd /usr/local/betamatch
+                                    python3 -m pytest"""}
         }
         /*sh 'python --version'
         sh 'python3 -m pip install pylint pytest safety pyflakes mypy prospector bandit'
