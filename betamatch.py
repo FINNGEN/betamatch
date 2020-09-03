@@ -187,7 +187,7 @@ def extract_doi(joined_data, info):
     In: joined data, column in ext file with doi
     Out: string with all dois contained in the file
     """
-    doi_concat=','.join(joined_data[info].unique())
+    doi_concat=','.join(joined_data[info].dropna().unique())
     return doi_concat
 
 def main(info_ext,info_fg,match_file,out_f):
@@ -205,6 +205,7 @@ def main(info_ext,info_fg,match_file,out_f):
         fg_name = os.path.splitext(os.path.basename(fg_path))[0]
         ext_name = os.path.splitext(os.path.basename(ext_path))[0]
         #check existance
+        print(row)
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
