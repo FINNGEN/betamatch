@@ -4,41 +4,11 @@ from plotnine import *
 import argparse,glob,os
 import traceback
 import re
-from betamatch import calculate_r2
 from typing import List, Dict, Any, Optional
 
+from beta_utils import *
+
 r = re.compile("x10",re.IGNORECASE)
-
-def standard_error_slope(x: np.array, y: np.array, yhat: np.array, N: int) -> float:
-    """Calculate standard error of slope estimate
-    Args:
-        x (np.array): numpy array of observed estimators
-        y (np.array): numpy array of observed values
-        yhat (np.array): numpy array of estimated values
-        N (int): number of observations, >= 3
-    Returns:
-        (float): standard error of slope estimate
-    """
-    x_avg = np.average(x)
-    return np.sqrt( np.sum( (y-yhat)**2 ) / (N-2)) / np.sqrt(np.sum( (x-x_avg)**2 ) )
-
-def calculate_regression(x: np.array, y: np.array, weights: Optional[np.array] = None) -> List[float] :
-    """Calculate regression coefficients from data
-    Use np.linalg.polyfit for linear regression. std.err is std.err of slope estimate.
-    Args:
-        x (np.array): numpy array of x-coordinates
-        y (np.array): numpy array of y-coordinates
-        weights (Optional[np.array]): numpy array of point weights
-    Returns:
-        (List[float]): List with [intercept, slope, stderr]
-    """
-    coeff = np.polynomial.polynomial.polyfit(x,y,deg=1,w=weights)
-    intercept=coeff[0]
-    slope = coeff[1]
-    N=x.shape[0]
-    yhat = intercept + slope*x
-    stderr = standard_error_slope(x,y,yhat,N)
-    return [ intercept, slope, stderr]
 
 def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval_field=None, p_threshold=None, exp_betas=False):
     if pval_field is not None:
@@ -73,13 +43,13 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         plot_data[x_title] = np.exp(plot_data[x_title])
         plot_data[y_title] = np.exp(plot_data[y_title])
 
-    [intercept,slope,stderr] = calculate_regression(plot_data[x_title].values,plot_data[y_title].values)
-    [intercept_w, slope_w, stderr_w] = calculate_regression(plot_data[x_title].values,plot_data[y_title].values,weights=1/(plot_data[se_fields[0]]**2+1e-9))
+    reg = calculate_regression(plot_data[x_title].values,plot_data[y_title].values)
+    reg_w = calculate_regression(plot_data[x_title].values,plot_data[y_title].values,weights=1/(plot_data[se_fields[0]]**2))
     (r_2_normal,r_2_weighted,N_normal, N_weighted) = calculate_r2(plot_data,x_title,y_title,se_fields[0]) 
-    
+
     x = np.linspace(-100,100,num=plot_data.shape[0])
-    y = intercept+slope*x
-    w_y = intercept_w+slope_w*x
+    y = reg.slope*x
+    w_y = reg_w.slope*x
     linedata = pd.DataFrame({x_title:x, y_title:y})
     linedata_weighted = pd.DataFrame({x_title:x, y_title:w_y})
     perf_corr = pd.DataFrame({x_title:x,y_title:x})
@@ -99,11 +69,10 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         xlim=(np.min(plot_data[x_title]),np.max(plot_data[x_title]))
         ylim=(1,np.max(plot_data[y_title]))
         x=np.linspace(xlim[0],xlim[1],num=plot_data.shape[0])
-        y=inter+slope*x
+        y=reg.slope*x
         linedata=pd.DataFrame({x_title:x, y_title:y})
         perf_corr=pd.DataFrame({x_title:x,y_title:x})
-    #print(slope,inter,rval,pval,stderr)
-    #print(corr)
+
 
     # add confidence interval
     #approx 1.96 *SE when using z-scores (a reasonable assumption)
@@ -123,8 +92,8 @@ def main(plot_data, pheno, fields,se_fields, x_title, y_title, output_name, pval
         geom_errorbar(mapping=aes(x=x_title,ymin="ci_y_neg",ymax="ci_y_pos",width=0.0),alpha=0.2)+
         geom_errorbarh(mapping=aes(y=y_title,xmin="ci_x_neg",xmax="ci_x_pos",height=0.0),alpha=0.2)+
         geom_point(color="red",size=0.5)+
-        annotate("text",label="R^2 (pearson):{:>5.2g}  slope:{:>5.2g}  sd(slope):{:>5.2g}".format(r_2_normal,slope,stderr),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
-        annotate("text",label="R^2 (weighted):{:>5.2g}  slope:{:>5.2g}  sd(slope):{:>5.2g}".format(r_2_weighted,slope_w,stderr_w),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
+        annotate("text",label="R^2 (pearsonr): {:>5.2g} slope: {:>5.2g} stderr(slope): {:>5.2g}".format(r_2_normal,reg.slope,reg.stderr),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.99,size=10 )+
+        annotate("text",label="R^2 (weighted): {:>5.2g} slope: {:>5.2g} stderr(slope): {:>5.2g}".format(r_2_weighted,reg_w.slope,reg_w.stderr),x=xlim[0]+(xlim[1]-xlim[0])*0.5,y=ylim[0]+(ylim[1]-ylim[0])*0.94,size=10 )+
         coord_cartesian(xlim=xlim,ylim=ylim)+
         ggtitle(pheno)+
         #scale_x_continuous(limits=xlim)+
