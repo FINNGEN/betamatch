@@ -53,42 +53,50 @@ def pytabix(tb,chrom,start,end):
         return []
 
 
-def match_beta(ext_path, fg_summary, info):
+def match_beta(ext_path, fg_summary, info_ext, info_fg):
     """
     Match beta for external summary variants and our variants
     In: ext fpath, fg fpath, column tuple
     Out: df containing the results. DOES NOT SAVE FILES
     """
     unified_prefix="unif_"
-    ext_dtype = {info[0]:object,
-                info[1]:object,
-                info[2]:object,
-                info[3]:object,
-                info[4]:float,
-                info[5]:float,}
+    ext_dtype = {info_ext[0]:object,
+                info_ext[1]:object,
+                info_ext[2]:object,
+                info_ext[3]:object,
+                info_ext[4]:float,
+                info_ext[5]:float,                
+                info_ext[6]:float,
+                info_ext[7]:object,}
+    fg_dtype = {info_fg[0]:object,
+                info_fg[1]:object,
+                info_fg[2]:object,
+                info_fg[3]:object,
+                info_fg[4]:float,
+                info_fg[5]:float,
+                info_fg[6]:float,}
     full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype)
-    full_ext_data[[info[2],info[3]]]=full_ext_data[[info[2],info[3]]].fillna(value="-")
+    full_ext_data[[info_ext[2],info_ext[3]]]=full_ext_data[[info_ext[2],info_ext[3]]].fillna(value="-")
 
-    full_ext_data[info[5]]=full_ext_data[info[5]].astype(float)
-    full_ext_data[info[4]]=full_ext_data[info[4]].astype(float)
+    full_ext_data[info_ext[5]]=full_ext_data[info_ext[5]].astype(float)
+    full_ext_data[info_ext[4]]=full_ext_data[info_ext[4]].astype(float)
     #replace missing se values with values derived from beta+pvalue
     for idx,row in full_ext_data.iterrows():
-        if pd.isna(row["se"]):
+        if pd.isna(row[info_ext[6]]):
             #calculate se
-            zscore=np.abs(norm.ppf(row["pval"]/2) )
-            se=np.abs(row["beta"])/zscore
-            full_ext_data.loc[idx,"se"] = np.nan if se <= 0 else se
-    
-    full_ext_data["se"]=full_ext_data["se"].astype(float)
+            zscore=np.abs(norm.ppf(row[info_ext[5]]/2) )
+            se=np.abs(row[info_ext[4]])/zscore
+            full_ext_data.loc[idx,info_ext[6]] = np.nan if se <= 0 else se
+    full_ext_data[info_ext[6]]=full_ext_data[info_ext[6]].astype(float)
     mset='^[acgtACGT]+$'
-    matchset1=full_ext_data[info[2]].apply(lambda x:bool(re.match(mset,x)))
-    matchset2=full_ext_data[info[3]].apply(lambda x:bool(re.match(mset,x)))
+    matchset1=full_ext_data[info_ext[2]].apply(lambda x:bool(re.match(mset,x)))
+    matchset2=full_ext_data[info_ext[3]].apply(lambda x:bool(re.match(mset,x)))
     ext_data=full_ext_data[matchset1 & matchset2].copy()
     invalid_ext_data=full_ext_data[~(matchset1 & matchset2)].copy()
     invalid_ext_data["invalid_data"]="YES"
-
-    ext_data[info[2]]=ext_data[info[2]].apply(lambda x:x.upper())
-    ext_data[info[3]]=ext_data[info[3]].apply(lambda x:x.upper())
+    ext_data[info_ext[2]]=ext_data[info_ext[2]].apply(lambda x:x.upper())
+    ext_data[info_ext[3]]=ext_data[info_ext[3]].apply(lambda x:x.upper())
+   
     #load corresponding data from fg file using tabix
     if not os.path.exists("{}.tbi".format(fg_summary)):
         raise FileNotFoundError("Tabix index for file {} not found. Make sure that the file is properly indexed.".format(fg_summary))
@@ -99,18 +107,19 @@ def match_beta(ext_path, fg_summary, info):
         raise
     tmp_lst=[]
     for _,row in ext_data.iterrows():
-        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info[0]],row[info[1]], row[info[1]] )
+        tmp_lst=tmp_lst+pytabix(tabix_handle,row[info_ext[0]],row[info_ext[1]],row[info_ext[1]] )
     header=get_gzip_header(fg_summary)
-    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=ext_dtype)
-    ext_data[info[4]]=pd.to_numeric(ext_data[info[4]],errors='coerce')
-    summary_data[info[4]]=pd.to_numeric(summary_data[info[4]])
+
+    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=fg_dtype)
+    ext_data[info_ext[4]]=pd.to_numeric(ext_data[info_ext[4]],errors='coerce')
+    summary_data[info_fg[4]]=pd.to_numeric(summary_data[info_fg[4]])
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)
-    summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
-    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info[2], info[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+    summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info_fg[2], info_fg[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
+    ext_data[[unif_ref,unif_alt]]=ext_data.loc[:,[ info_ext[2], info_ext[3] ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
     unif_beta="{}beta".format(unified_prefix)
-    summary_data[unif_beta]=summary_data[info[4]]
-    ext_data[unif_beta]=ext_data[info[4]]
+    summary_data[unif_beta]=summary_data[info_fg[4]]
+    ext_data[unif_beta]=ext_data[info_ext[4]]
 
     summary_data["sort_dir"] = summary_data[[unif_ref,unif_alt]].apply(lambda x: -1 if (sorted(list(x) ) != list(x)) else 1,axis=1)
     summary_data[[unif_ref,unif_alt]]=summary_data[[unif_ref,unif_alt]].apply(lambda x: sorted(list(x)),axis=1,result_type="expand")
@@ -121,7 +130,9 @@ def match_beta(ext_path, fg_summary, info):
     ext_data[unif_beta]=ext_data["sort_dir"]*ext_data[unif_beta]
     ext_data=ext_data.drop(labels="sort_dir",axis="columns")
     ext_data=pd.concat([ext_data,invalid_ext_data],sort=False)
-    joined_data=pd.merge(ext_data, summary_data,how="left",on=[info[0],info[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
+    info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext)-1)} 
+    summary_data.rename(columns=info_fg_rename, inplace=True)
+    joined_data=pd.merge(ext_data, summary_data,how="left", on=[info_ext[0],info_ext[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
 
     unif_beta_ext="{}_ext".format(unif_beta)
     unif_beta_fg="{}_fg".format(unif_beta)
@@ -129,14 +140,27 @@ def match_beta(ext_path, fg_summary, info):
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
-    field_order=["trait", "#chrom", "pos",# "maf", "maf_cases", "maf_controls",  "rsids", "nearest_genes",
-     "ref_ext", "alt_ext",  "ref_fg", "alt_fg", 
-     "beta_ext", "beta_fg", "se", "sebeta", "pval_ext", "pval_fg",#"unif_ref_ext", "unif_alt_ext", "unif_ref_fg", "unif_alt_fg", 
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction"]
+    field_order=["trait", info_ext[0], info_ext[1],
+     info_ext[2]+"_ext",info_ext[3]+"_ext", 
+     info_ext[2]+"_fg", info_ext[3]+"_fg", 
+     info_ext[4]+"_ext",info_ext[4]+"_fg",
+     info_ext[5]+"_ext",info_ext[5]+"_fg",
+     info_ext[6]+"_ext",info_ext[6]+"_fg",
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", "study_doi"]
+
     joined_data=joined_data[field_order]
     return joined_data
 
-def main(info,match_file,out_f,pval_filter):
+def extract_doi(joined_data, info):
+    """
+    Output doi strings
+    In: joined data, column in ext file with doi
+    Out: string with all dois contained in the file
+    """
+    doi_concat=','.join(joined_data[info].dropna().unique())
+    return doi_concat
+
+def main(info_ext,info_fg,match_file,out_f,pval_filter):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -151,16 +175,18 @@ def main(info,match_file,out_f,pval_filter):
         fg_name = os.path.splitext(os.path.basename(fg_path))[0]
         ext_name = os.path.splitext(os.path.basename(ext_path))[0]
         #check existance
+        print(row)
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info)
             matched_betas=matched_betas[matched_betas["pval_ext"]<=pval_filter]
             stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se"]].dropna(axis="index",how="any")
+            dois_ext=extract_doi(matched_betas,info_ext[7])
             if not stat_data.empty:
                 r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se")
                 normal_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
                 weighted_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data["se"]**2) )
-                row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w}
+                row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w, "study_doi": dois_ext}
                 row.update( {"Regression slope":normal_regression.slope,"Weighted regression slope":weighted_regression.slope,"Regression intercept":0.0,
                     "Weighted regression intercept":0.0,
                     "Regression std.err.":normal_regression.stderr,
@@ -168,6 +194,7 @@ def main(info,match_file,out_f,pval_filter):
                     "Regression slope p-value": normal_regression.pval,
                     "Weighted regression slope p-value": weighted_regression.pval} )
                 r2s.append(row)
+
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
@@ -182,9 +209,11 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
     #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
     #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
-    parser.add_argument("--info",nargs=6,required=True,default=("#chrom","pos","ref","alt","beta","pval"),metavar=("#chrom","pos","ref","alt","beta","pval"),help="column names")
+    parser.add_argument("--info-ext",nargs=8,required=True,default=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),metavar=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),help="column names for external file")
+    parser.add_argument("--info-fg",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for finngen file")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
     parser.add_argument("--pval-filter",default=1.0,type=float,help="Filter p-value for summary file")
     args=parser.parse_args()
-    main(args.info,args.match_file,args.output_folder,args.pval_filter)
+
+    main(args.info_ext,args.info_fg,args.match_file,args.output_folder,args.pval_filter)
