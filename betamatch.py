@@ -178,12 +178,12 @@ def main(info_ext,info_fg,match_file,out_f,pval_filter):
         print(row)
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
-            matched_betas=match_beta(ext_path,fg_path,info)
+            matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
             matched_betas=matched_betas[matched_betas["pval_ext"]<=pval_filter]
-            stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se"]].dropna(axis="index",how="any")
+            stat_data=matched_betas[["unif_beta_ext","unif_beta_fg","se_ext"]].dropna(axis="index",how="any")
             dois_ext=extract_doi(matched_betas,info_ext[7])
             if not stat_data.empty:
-                r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se")
+                r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg","se_ext")
                 normal_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
                 weighted_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data["se"]**2) )
                 row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w, "study_doi": dois_ext}
