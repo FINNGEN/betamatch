@@ -140,13 +140,17 @@ def match_beta(ext_path, fg_summary, info_ext, info_fg):
         lambda x: flip_beta(*x),axis=1,result_type="expand")
     
     joined_data["beta_same_direction"]=(joined_data["{}_ext".format(unif_beta) ]*joined_data["{}_fg".format(unif_beta) ])>=0
-    field_order=["trait", info_ext[0], info_ext[1],
+    if "trait" not in joined_data.columns:
+        traitcol = []
+    else:
+        traitcol = ["trait"]
+    field_order=traitcol + [info_ext[0], info_ext[1],
      info_ext[2]+"_ext",info_ext[3]+"_ext", 
      info_ext[2]+"_fg", info_ext[3]+"_fg", 
      info_ext[4]+"_ext",info_ext[4]+"_fg",
      info_ext[5]+"_ext",info_ext[5]+"_fg",
      info_ext[6]+"_ext",info_ext[6]+"_fg",
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", "study_doi"]
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", info_ext[7]]
 
     joined_data=joined_data[field_order]
     return joined_data
