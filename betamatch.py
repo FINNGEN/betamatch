@@ -153,6 +153,7 @@ def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
     info_fg_rename = {info_fg[i]:info_ext[i] for i in range(len(info_ext)-1)} 
     summary_data.rename(columns=info_fg_rename, inplace=True)
     joined_data=pd.merge(ext_data, summary_data,how="left", on=[info_ext[0],info_ext[1],unif_alt,unif_ref],suffixes=("_ext","_fg"))
+    print(joined_data.columns)
 
     unif_beta_ext="{}_ext".format(unif_beta)
     unif_beta_fg="{}_fg".format(unif_beta)
@@ -205,7 +206,7 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
             matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
             matched_betas=matched_betas[matched_betas[info_ext.pval+"_ext"]<=pval_filter]
             stat_data=matched_betas[["unif_beta_ext","unif_beta_fg",info_ext.se+"_ext"]].dropna(axis="index",how="any")
-            dois_ext=extract_doi(matched_betas,info_ext.study_doi)
+            dois_ext=extract_doi(matched_betas,info_ext.study_doi+"_ext")
             if not stat_data.empty:
                 r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg",info_ext.se+"_ext")
                 normal_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
