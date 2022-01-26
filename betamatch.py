@@ -170,7 +170,7 @@ def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
      info_ext.beta+"_ext",info_ext.beta+"_fg",
      info_ext.pval+"_ext",info_ext.pval+"_fg",
      info_ext.se+"_ext",info_ext.se+"_fg",
-     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", info_ext.study_doi]
+     "unif_ref","unif_alt","unif_beta_ext", "unif_beta_fg", "invalid_data", "beta_same_direction", info_ext.study_doi+"_ext"]
 
     joined_data=joined_data[field_order]
     return joined_data
