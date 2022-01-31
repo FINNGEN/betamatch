@@ -133,6 +133,11 @@ def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
     summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=fg_dtype)
     ext_data[info_ext.beta]=pd.to_numeric(ext_data[info_ext.beta],errors='coerce')
     summary_data[info_fg.beta]=pd.to_numeric(summary_data[info_fg.beta])
+    #filter out invalid variants from summaries
+    matchset1=summary_data[info_fg.ref].apply(lambda x:bool(re.match(mset,x)))
+    matchset2=summary_data[info_fg.alt].apply(lambda x:bool(re.match(mset,x)))
+    summary_data=summary_data[matchset1 & matchset2]
+
     unif_alt="{}alt".format(unified_prefix)
     unif_ref="{}ref".format(unified_prefix)
     summary_data[[unif_ref,unif_alt]]=summary_data.loc[:,[ info_fg.ref, info_fg.alt ]].apply(lambda x: flip_unified_strand(*x),axis=1,result_type="expand")
