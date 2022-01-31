@@ -1,9 +1,12 @@
 {
-    "betamatch.docker":"eu.gcr.io/finngen-refinery-dev/betamatch:79be583",
+    "betamatch.docker":"eu.gcr.io/finngen-refinery-dev/betamatch:91dfca3",
     "betamatch.match_file":"gs://misc-analysis/betamatch_ext_data/github_match_file_r4.tsv",
     "betamatch.pval_threshold":1e-10,
     "betamatch.ext_repo_url":"https://github.com/FINNGEN/betamatch-ext-data.git",
     "betamatch.ext_repo_branch":"master", 
     "betamatch.column_names_ext":["\"#chrom\"","pos","ref","alt","beta","pval","se","study_doi"],
-    "betamatch.column_names_fg":["\"#chrom\"","pos","ref","alt","beta","pval","sebeta"]
+    "betamatch.column_names_fg":["\"#chrom\"","pos","ref","alt","beta","pval","sebeta"],
+    "betamatch.match_betas.zones":"europe-west1-b europe-west1-c europe-west1-d",
+    "betamatch.match_betas.xlabel":"FinnGen beta",
+    "betamatch.match_betas.ylabel":"External beta"
 }

@@ -10,6 +10,10 @@ task match_betas{
     String ext_repo_url
     String ext_repo_branch
     Float pval_threshold
+    String zones
+    String xlabel
+    String ylabel
+
     command <<<
         #download github repo to ext_repo
         git clone -b ${ext_repo_branch} ${ext_repo_url} ext_repo
@@ -20,15 +24,15 @@ task match_betas{
         mkdir ${out_f}
         
         betamatch.py --info-ext ${sep=" " column_names_ext} --info-fg ${sep=" " column_names_fg} --match-file matchfile --output-folder ${out_f} --pval-filter ${pval_threshold}
-        corrplot.py ${out_f} --fields unif_beta_fg unif_beta_ext --se-fields se_fg se_ext --x-title "FinnGen beta" --y-title "External beta" --pval_field pval_ext --pval_threshold ${pval_threshold} --out "output.pdf"
+        corrplot.py ${out_f} --fields unif_beta_fg unif_beta_ext --se-fields ${column_names_ext[6]}_fg ${column_names_ext[6]}_ext --x-title "${xlabel}" --y-title "${ylabel}" --pval_field ${column_names_ext[5]}_ext --pval_threshold ${pval_threshold} --out "output.pdf"
     >>>
 
     runtime {
         docker: "${docker}"
         cpu: "1"
-        memory: "3 GB"
-        disks: "local-disk 50 HDD"
-        zones: "europe-west1-b"
+        memory: "6 GB"
+        disks: "local-disk 200 HDD"
+        zones: "${zones}"
         preemptible: 2 
     }
 
@@ -50,7 +54,7 @@ workflow betamatch{
     Array[String] column_names_ext
     Array[String] column_names_fg
     scatter (s in range( length( temp) ) ){#scatter magic, it just works
-        String t = sub(temp[s],".gz",".gz.tbi") 
+        String t = temp[s]+".tbi"
     }
     call match_betas {
         input: match_file = files, docker=docker, tbi_indexes=t, pval_threshold = pval_threshold, ext_repo_url = ext_repo_url, ext_repo_branch = ext_repo_branch, column_names_ext = column_names_ext, column_names_fg = column_names_fg
