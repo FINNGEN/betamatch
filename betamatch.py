@@ -5,7 +5,7 @@ import tabix
 import argparse
 import os,shlex,re
 from subprocess import Popen,PIPE
-from scipy.stats import pearsonr, norm
+from scipy.stats import norm
 import corrplot as cop
 import plotnine
 
