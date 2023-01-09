@@ -6,6 +6,8 @@ import argparse
 import os,subprocess,glob,shlex,re
 from subprocess import Popen,PIPE
 from scipy.stats import pearsonr, norm
+import corrplot as cop
+import plotnine
 
 from beta_utils import *
 
@@ -202,10 +204,12 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
         ext_path = row["EXT"]
         fg_path = row["FG"]
         fg_name = os.path.splitext(os.path.basename(fg_path))[0]
-        ext_name = os.path.splitext(os.path.basename(ext_path))[0]
+        ext_name = os.path.splitext(os.path.basename(ext_path))[0].split(".")[0]
         #check existance
         print(row)
-        output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
+        output_fname="{}x{}.betas.tsv".format(ext_name,fg_name)
+        phenopair = output_fname.split(".")[0]
+        plots = []
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
             matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
             matched_betas=matched_betas[matched_betas[info_ext.pval+"_ext"]<=pval_filter]
@@ -215,7 +219,7 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
                 r2,w_r2,n_r,n_w=calculate_r2(stat_data,"unif_beta_ext","unif_beta_fg",info_ext.se+"_ext")
                 normal_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values )
                 weighted_regression = calculate_regression(stat_data["unif_beta_ext"].values,stat_data["unif_beta_fg"].values,1/(stat_data[info_ext.se+"_ext"]**2) )
-                row={"phenotype":output_fname.split(".")[0],"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w, "study_doi": dois_ext}
+                row={"phenotype":phenopair,"R^2":r2,"Weighted R^2 (1/ext var)":w_r2,"N (unweighted)":n_r,"N (weighted)":n_w, "study_doi": dois_ext}
                 row.update( {"Regression slope":normal_regression.slope,"Weighted regression slope":weighted_regression.slope,"Regression intercept":0.0,
                     "Weighted regression intercept":0.0,
                     "Regression std.err.":normal_regression.stderr,
@@ -223,12 +227,16 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
                     "Regression slope p-value": normal_regression.pval,
                     "Weighted regression slope p-value": weighted_regression.pval} )
                 r2s.append(row)
-
+                #plot data
+                plt = cop.main(matched_betas,phenopair,["unif_beta_ext","unif_beta_fg"],[info_ext.se+"_ext",info_fg.se+"_fg"],ext_name,fg_name,"",info_ext.pval+"_ext",info_fg.pval+"_fg",False)
+                plots.append(plt)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
             print("One of the files {}, {} does not exist. That pairing is skipped.".format(ext_path,fg_path))
     r2s=pd.DataFrame(r2s)
+    plots=[x for x in plots if x != None]
+    plotnine.save_as_pdf_pages(plots,"correlation_plots.pdf")
     r2s.to_csv("r2_table.tsv",sep="\t",index=False,float_format="%.3g",na_rep="-")
     print("The following files were created:")
     [print(s) for s in output_list]
