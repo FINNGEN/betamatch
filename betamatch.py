@@ -3,7 +3,7 @@ from typing import NamedTuple
 import pandas as pd, numpy as np
 import tabix
 import argparse
-import os,subprocess,glob,shlex,re
+import os,shlex,re
 from subprocess import Popen,PIPE
 from scipy.stats import pearsonr, norm
 import corrplot as cop
@@ -227,9 +227,12 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
                     "Regression slope p-value": normal_regression.pval,
                     "Weighted regression slope p-value": weighted_regression.pval} )
                 r2s.append(row)
-                #plot data
-                plt = cop.main(matched_betas,phenopair,["unif_beta_ext","unif_beta_fg"],[info_ext.se+"_ext",info_fg.se+"_fg"],ext_name,fg_name,"",info_ext.pval+"_ext",info_fg.pval+"_fg",False)
-                plots.append(plt)
+                if stat_data.shape[0] >=2:
+                    ## data transformation: renaming etc.
+                    datapoints = stat_data.rename(columns={"unif_beta_ext":"x","unif_beta_fg":"y",info_ext.se+"_ext":"x_se",info_fg.se+"_fg":"y_se"})
+
+                    plt = cop.plot_simple(datapoints,normal_regression,weighted_regression,ext_name,fg_name,r2,w_r2,phenopair)
+                    plots.append(plt)
             matched_betas.to_csv(path_or_buf=out_f+"/"+output_fname,index=False,sep="\t",na_rep="-")
             output_list.append(output_fname)
         else:
@@ -244,8 +247,6 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description="Match beta of summary statistic and external summaries")
-    #parser.add_argument("--folder",type=str,required=True,help="Folder containing the external summaries that are meant to be used. Files should be names like FinnGen phenotypes.")
-    #parser.add_argument("--summaryfolder",type=str,required=True,help="Finngen summary statistic folder")
     parser.add_argument("--info-ext",nargs=8,required=True,default=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),metavar=("#chrom","pos","ref","alt","beta","pval","se","study_doi"),help="column names for external file")
     parser.add_argument("--info-fg",nargs=7,required=True,default=("#chrom","pos","ref","alt","beta","pval","se"),metavar=("#chrom","pos","ref","alt","beta","pval","se"),help="column names for finngen file")
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
