@@ -2,23 +2,24 @@
 Tools for matching betas between cherry-picked GWAS studies and FINNGEN results
 ## betamatch.py
 ```
-usage: betamatch.py [-h] --folder FOLDER --summaryfolder SUMMARYFOLDER --info
-                    #chrom pos ref alt beta pval --match-file MATCH_FILE
+usage: betamatch.py [-h] --info-ext #chrom pos ref alt beta pval se study_doi --info-fg #chrom pos ref alt beta pval se --match-file MATCH_FILE --output-folder
+                    OUTPUT_FOLDER [--pval-filter PVAL_FILTER] [--drop-extra-cols]
 
 Match beta of summary statistic and external summaries
 
 optional arguments:
   -h, --help            show this help message and exit
-  --folder FOLDER       Folder containing the external summaries that are
-                        meant to be used. Files should be names like FinnGen
-                        phenotypes.
-  --summaryfolder SUMMARYFOLDER
-                        Finngen summary statistic folder
-  --info #chrom pos ref alt beta pval
-                        column names
+  --info-ext #chrom pos ref alt beta pval se study_doi
+                        column names for external file
+  --info-fg #chrom pos ref alt beta pval se
+                        column names for finngen file
   --match-file MATCH_FILE
-                        List containing the comparisons to be done, as a tsv
-                        with columns FG and EXT
+                        List containing the comparisons to be done, as a tsv with columns FG and EXT
+  --output-folder OUTPUT_FOLDER
+                        Output folder
+  --pval-filter PVAL_FILTER
+                        Filter p-value for summary file
+  --drop-extra-cols     Drop extra columns
 ```
 ## corrplot.py
 ```
