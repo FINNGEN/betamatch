@@ -73,7 +73,7 @@ def pytabix(tb,chrom,start,end):
         return []
 
 
-def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
+def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols, drop_extra_cols=False):
     """
     Match beta for external summary variants and our variants
     In: ext fpath, fg fpath, column tuple
@@ -95,11 +95,10 @@ def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
                 info_fg.beta:float,
                 info_fg.pval:float,
                 info_fg.se:float}
-    full_ext_data= pd.read_csv(ext_path,sep="\t",dtype=ext_dtype)
-    full_ext_data[[info_ext.ref,info_ext.alt]]=full_ext_data[[info_ext.ref,info_ext.alt]].fillna(value="-")
-
-    full_ext_data[info_ext.pval]=full_ext_data[info_ext.pval].astype(float)
-    full_ext_data[info_ext.beta]=full_ext_data[info_ext.beta].astype(float)
+    full_ext_data = pd.read_csv(ext_path,sep="\t",dtype=ext_dtype, na_values='-')
+    if drop_extra_cols:
+        full_ext_data = full_ext_data[ext_dtype.keys()]
+    full_ext_data = full_ext_data.dropna(subset=[info_ext.chr, info_ext.pos, info_ext.ref, info_ext.alt, info_ext.beta, info_ext.pval], how='any')
     #replace missing se values with values derived from beta+pvalue
     for idx,row in full_ext_data.iterrows():
         if pd.isna(row[info_ext.se]):
@@ -130,7 +129,10 @@ def match_beta(ext_path, fg_summary, info_ext:ExtCols, info_fg:FGCols):
         tmp_lst=tmp_lst+pytabix(tabix_handle,row[info_ext.chr],row[info_ext.pos],row[info_ext.pos] )
     header=get_gzip_header(fg_summary)
 
-    summary_data=pd.DataFrame(tmp_lst,columns=header).astype(dtype=fg_dtype)
+    summary_data=pd.DataFrame(tmp_lst,columns=header).replace('-', np.nan).astype(dtype=fg_dtype)
+    if drop_extra_cols:
+        summary_data = summary_data[fg_dtype.keys()]
+    summary_data = summary_data.dropna(subset=[info_fg.chr, info_fg.pos, info_fg.ref, info_fg.alt, info_fg.beta, info_fg.pval], how='any')
     ext_data[info_ext.beta]=pd.to_numeric(ext_data[info_ext.beta],errors='coerce')
     summary_data[info_fg.beta]=pd.to_numeric(summary_data[info_fg.beta])
     #filter out invalid variants from summaries
@@ -189,7 +191,7 @@ def extract_doi(joined_data, info):
     doi_concat=','.join(joined_data[info].dropna().unique())
     return doi_concat
 
-def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
+def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter,drop_extra_cols):
     """
     Match betas between external summ stats and FG summ stats
     In: folder containing ext summaries, folder containing fg summaries, column tuple, matching tsv file path 
@@ -207,7 +209,7 @@ def main(info_ext:ExtCols,info_fg:FGCols,match_file,out_f,pval_filter):
         print(row)
         output_fname="{}x{}.betas.tsv".format(ext_name.split(".")[0],fg_name)
         if (os.path.exists( ext_path ) ) and ( os.path.exists( fg_path ) ):
-            matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg)
+            matched_betas=match_beta(ext_path,fg_path,info_ext,info_fg,drop_extra_cols)
             matched_betas=matched_betas[matched_betas[info_ext.pval+"_ext"]<=pval_filter]
             stat_data=matched_betas[["unif_beta_ext","unif_beta_fg",info_ext.se+"_ext"]].dropna(axis="index",how="any")
             dois_ext=extract_doi(matched_betas,info_ext.study_doi)
@@ -243,6 +245,7 @@ if __name__=="__main__":
     parser.add_argument("--match-file",required=True,help="List containing the comparisons to be done, as a tsv with columns FG and EXT")
     parser.add_argument("--output-folder",required=True,help="Output folder")
     parser.add_argument("--pval-filter",default=1.0,type=float,help="Filter p-value for summary file")
+    parser.add_argument("--drop-extra-cols",action="store_true",help="Drop extra columns")
     args=parser.parse_args()
     extcols = ExtCols(
         args.info_ext[0],
@@ -264,4 +267,4 @@ if __name__=="__main__":
         args.info_fg[6]
     )
 
-    main(extcols,fgcols,args.match_file,args.output_folder,args.pval_filter)
+    main(extcols,fgcols,args.match_file,args.output_folder,args.pval_filter, args.drop_extra_cols)
