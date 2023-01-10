@@ -1,0 +1,10 @@
+{
+    "betamatch.docker":"eu.gcr.io/finngen-refinery-dev/betamatch:91dfca3",
+    "betamatch.match_file":"gs://misc-analysis/betamatch_ext_data/betamatch_r10_estbb_O15.tsv",
+    "betamatch.match_betas.pval_threshold":1e-10,
+    "betamatch.match_betas.column_names_ref":["chrom","pos","ref","alt","lead_beta","pval","lead_sebeta","phenotype_abbreviation"],
+    "betamatch.match_betas.column_names_other":["\"#CHR\"","POS","REF","ALT","beta","pval","sebeta"],
+    "betamatch.match_betas.zones":"europe-west1-b europe-west1-c europe-west1-d",
+    "betamatch.match_betas.xlabel":"EstBB beta",
+    "betamatch.match_betas.ylabel":"R10 beta"
+}
