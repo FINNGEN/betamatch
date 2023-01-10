@@ -1,0 +1,5 @@
+numpy      
+pandas     
+plotnine   
+pytabix    
+statsmodels
