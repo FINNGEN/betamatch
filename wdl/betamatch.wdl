@@ -27,7 +27,7 @@ task match_betas {
         mkdir ~{out_f}
         
         betamatch.py --info-ext ~{sep=" " column_names_ref} --info-fg ~{sep=" " column_names_other} --match-file matchfile --output-folder ~{out_f} --pval-filter ~{pval_threshold}
-        corrplot.py ~{out_f} --fields unif_beta_fg unif_beta_ext --se-fields ~{column_names_ref[6]}_fg ~{column_names_ref[6]}_ext --x-title "~{xlabel}" --y-title "~{ylabel}" --pval_field ~{column_names_ref[5]}_ext --pval_threshold ~{pval_threshold} --out "output.pdf"
+        corrplot.py ~{out_f} --fields unif_beta_ext unif_beta_fg --se-fields ~{column_names_ref[6]}_ext ~{column_names_ref[6]}_fg --x-title "~{xlabel}" --y-title "~{ylabel}" --pval_field ~{column_names_ref[5]}_ext --pval_threshold ~{pval_threshold} --out "output.pdf"
 
     >>>
 
