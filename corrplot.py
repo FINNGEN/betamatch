@@ -123,7 +123,7 @@ if __name__=="__main__":
     args=parser.parse_args()
     files=glob.glob("{}/*.tsv".format(args.folder) )
     plots = []
-    for f in files:
+    for f in sorted(files):
         out_fname=os.path.basename(f).split(".")[0] + args.out
         try:
             plot_data=pd.read_csv(f,sep="\t",na_values="-")
