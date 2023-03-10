@@ -16,7 +16,7 @@ task match_betas {
         String ylabel
 
         String out_f = "out_f"
-        Int disk_size = ceil(size(ref_files, "GB")) + ceil(size(summary_files, "GB")) + 5
+        Int disk_size = ceil((size(ref_files, "GB") + size(summary_files, "GB")) * 1.2) + 5
     }
 
     command <<<
